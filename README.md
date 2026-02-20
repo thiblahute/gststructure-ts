@@ -13,14 +13,32 @@ npm install gststructure
 ### Parsing a GstStructure
 
 ```ts
+import { GstStructure } from 'gststructure';
+
+const s = GstStructure.fromString('video/x-raw, format=I420, width=1920, height=1080, framerate=30/1');
+
+s.name        // → 'video/x-raw'
+s['width']    // → 1920
+s['format']   // → 'I420'
+s['framerate']// → { numerator: 30, denominator: 1 }
+s['loop']     // → undefined  (missing fields return undefined)
+```
+
+Field access via `s['fieldName']` returns plain JavaScript values — no type wrapper.
+For the full typed `Value` object use `getTyped()`:
+
+```ts
+s.getTyped('width')    // → { type: 'int', value: 1920 }
+s.getTyped('framerate')// → { type: 'fraction', numerator: 30, denominator: 1 }
+```
+
+`parseStructure()` is a convenient alternative that returns `null` on invalid input instead of throwing:
+
+```ts
 import { parseStructure } from 'gststructure';
 
-const s = parseStructure('video/x-raw, format=I420, width=1920, height=1080, framerate=30/1');
-
-console.log(s.name);                   // 'video/x-raw'
-console.log(s.fields.get('width'));    // { type: 'int', value: 1920 }
-console.log(s.fields.get('format'));   // { type: 'string', value: 'I420' }
-console.log(s.fields.get('framerate'));// { type: 'fraction', numerator: 30, denominator: 1 }
+const s = parseStructure('video/x-raw, format=I420')!;
+s['format']  // → 'I420'
 ```
 
 ### Parsing GstCaps
@@ -46,15 +64,15 @@ const dmabuf = parseCaps('video/x-raw(memory:DMABuf), format=NV12');
 ### Serializing back to string
 
 ```ts
-import { parseStructure, parseCaps, structureToString, capsToString } from 'gststructure';
+import { GstStructure, capsToString, parseCaps } from 'gststructure';
 
-const s = parseStructure('seek, start=5.0, stop=10.0, flags=flush+accurate')!;
-console.log(structureToString(s));
-// 'seek, start=(double)5.0, stop=(double)10.0, flags=flush+accurate'
+const s = GstStructure.fromString('seek, start=5.0, stop=10.0, flags=flush+accurate');
+s.toString()
+// → 'seek, start=(double)5.0, stop=(double)10.0, flags=flush+accurate'
 
 const caps = parseCaps('video/x-raw, format=I420; audio/x-raw, rate=44100')!;
-console.log(capsToString(caps));
-// 'video/x-raw, format="I420"; audio/x-raw, rate=(int)44100'
+capsToString(caps)
+// → 'video/x-raw, format="I420"; audio/x-raw, rate=(int)44100'
 ```
 
 ### Error handling
@@ -62,10 +80,10 @@ console.log(capsToString(caps));
 `parseStructure` and `parseCaps` return `null` on invalid input. Use the `OrThrow` variants to get a `ParseError` instead:
 
 ```ts
-import { parseStructureOrThrow, parseCapsOrThrow, ParseError } from 'gststructure';
+import { GstStructure, parseCapsOrThrow, ParseError } from 'gststructure';
 
 try {
-  const s = parseStructureOrThrow('=invalid');
+  GstStructure.fromString('=invalid');
 } catch (e) {
   if (e instanceof ParseError) {
     console.error(e.message); // includes position info
@@ -75,37 +93,48 @@ try {
 
 ## Supported value types
 
-| GStreamer type | Example | Parsed as |
+| GStreamer type | Example | `s['field']` returns |
 |---|---|---|
-| Integer | `42`, `(int)42`, `0xFF` | `{ type: 'int', value: 42 }` |
-| Float | `3.14`, `(float)1.0` | `{ type: 'double', value: 3.14 }` |
-| Boolean | `true`, `yes`, `t`, `(bool)1` | `{ type: 'boolean', value: true }` |
-| String | `"hello"`, `(string)world` | `{ type: 'string', value: 'hello' }` |
-| Fraction | `30/1` | `{ type: 'fraction', numerator: 30, denominator: 1 }` |
-| Bitmask | `(bitmask)0x67` | `{ type: 'bitmask', value: 103n }` |
-| Flags | `flush+accurate` | `{ type: 'flags', flags: ['flush', 'accurate'] }` |
-| GstValueList | `{ 1, 2, 3 }` | `{ type: 'list', items: [...] }` |
-| GstValueArray | `< 1, 2, 3 >` | `{ type: 'array', items: [...] }` |
-| Range | `[ 0, 255 ]`, `[ 0, 255, 2 ]` | `{ type: 'range', min, max, step? }` |
-| Nested GstStructure | `(GstStructure)"name, field=val;"` | `{ type: 'structure', value: Structure }` |
-| Nested GstCaps | `(GstCaps)"video/x-raw"`, `(GstCaps)[video/x-raw]` | `{ type: 'caps', value: Caps }` |
+| Integer | `42`, `(int)42`, `0xFF` | `number` |
+| Float | `3.14`, `(float)1.0` | `number` |
+| Boolean | `true`, `yes`, `t`, `(bool)1` | `boolean` |
+| String | `"hello"`, `(string)world` | `string` |
+| Fraction | `30/1` | `{ numerator: number; denominator: number }` |
+| Bitmask | `(bitmask)0x67` | `bigint` |
+| Flags | `flush+accurate` | `string[]` |
+| GstValueList | `{ 1, 2, 3 }` | `unknown[]` (recursively unwrapped) |
+| GstValueArray | `< 1, 2, 3 >` | `unknown[]` (recursively unwrapped) |
+| Range | `[ 0, 255 ]`, `[ 0, 255, 2 ]` | `{ min, max, step? }` (unwrapped) |
+| Nested GstStructure | `(GstStructure)"name, field=val;"` | `GstStructure` |
+| Nested GstCaps | `(GstCaps)"video/x-raw"` | `Caps` |
 
 Type inference for unquoted values follows GStreamer's own order: `int → double → fraction → flags → boolean → string`.
 
 ## API
 
 ```ts
-// Parsing
-function parseStructure(s: string): Structure | null
+// Primary class
+class GstStructure {
+  static fromString(s: string): GstStructure  // throws ParseError on failure
+  readonly name: string
+  readonly fields: Map<string, Value>          // typed access
+  [key: string]: unknown                       // dict-like access (unwrapped)
+  getTyped(key: string): Value | undefined
+  toString(): string
+}
+
+// Functional API
+function parseStructure(s: string): GstStructure | null
+function parseStructureOrThrow(s: string): GstStructure
 function parseCaps(s: string): Caps | null
-function parseStructureOrThrow(s: string): Structure   // throws ParseError
-function parseCapsOrThrow(s: string): Caps             // throws ParseError
+function parseCapsOrThrow(s: string): Caps
 
 // Serialization
 function structureToString(s: Structure): string
 function capsToString(c: Caps): string
 function valueToString(v: Value): string      // with explicit type prefix
 function valueToStringBare(v: Value): string  // without prefix for scalars
+function unwrapValue(v: Value): unknown       // unwrap to plain JS value
 ```
 
 ## License

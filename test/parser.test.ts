@@ -1,10 +1,13 @@
 import { describe, it, expect } from 'vitest';
 import {
   parseStructure,
+  parseStructureOrThrow,
   parseCaps,
   structureToString,
   capsToString,
   valueToString,
+  GstStructure,
+  unwrapValue,
   type Value,
   type Structure,
   type Caps,
@@ -668,5 +671,144 @@ describe('Error handling', () => {
 
   it('returns null for invalid caps', () => {
     expect(parseCaps('')).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// GstStructure – dict-like access
+// ---------------------------------------------------------------------------
+
+describe('GstStructure – dict-like field access', () => {
+  it('GstStructure.fromString returns a GstStructure instance', () => {
+    const s = GstStructure.fromString('seek, start=5.0');
+    expect(s).toBeInstanceOf(GstStructure);
+    expect(s.name).toBe('seek');
+  });
+
+  it('parseStructure returns a GstStructure instance', () => {
+    const s = parseStructure('seek, start=5.0');
+    expect(s).toBeInstanceOf(GstStructure);
+  });
+
+  it('accesses an int field as a number', () => {
+    const s = GstStructure.fromString('foo, width=1920');
+    expect(s['width']).toBe(1920);
+  });
+
+  it('accesses a double field as a number', () => {
+    const s = GstStructure.fromString('seek, start=5.0');
+    expect(s['start']).toBe(5.0);
+  });
+
+  it('accesses a string field as a string', () => {
+    const s = GstStructure.fromString('foo, format=I420');
+    expect(s['format']).toBe('I420');
+  });
+
+  it('accesses a quoted string field as a string', () => {
+    const s = GstStructure.fromString('foo, text="hello world"');
+    expect(s['text']).toBe('hello world');
+  });
+
+  it('accesses a boolean field as a boolean', () => {
+    const s = GstStructure.fromString('meta, loop=true, seek=false');
+    expect(s['loop']).toBe(true);
+    expect(s['seek']).toBe(false);
+  });
+
+  it('accesses a fraction field as {numerator, denominator}', () => {
+    const s = GstStructure.fromString('foo, framerate=30/1');
+    expect(s['framerate']).toEqual({ numerator: 30, denominator: 1 });
+  });
+
+  it('accesses a bitmask field as a bigint', () => {
+    const s = GstStructure.fromString('foo, mask=(bitmask)0xFF');
+    expect(s['mask']).toBe(255n);
+  });
+
+  it('accesses a flags field as a string array', () => {
+    const s = GstStructure.fromString('seek, flags=flush+accurate');
+    expect(s['flags']).toEqual(['flush', 'accurate']);
+  });
+
+  it('accesses a list field as an array of unwrapped values', () => {
+    const s = GstStructure.fromString('foo, opts={1, 2, 3}');
+    expect(s['opts']).toEqual([1, 2, 3]);
+  });
+
+  it('accesses an array field as an array of unwrapped values', () => {
+    const s = GstStructure.fromString('foo, arr=<"a", "b">');
+    expect(s['arr']).toEqual(['a', 'b']);
+  });
+
+  it('accesses a range field as {min, max}', () => {
+    const s = GstStructure.fromString('foo, r=[0, 255]');
+    expect(s['r']).toEqual({ min: 0, max: 255 });
+  });
+
+  it('accesses a range field with step as {min, max, step}', () => {
+    const s = GstStructure.fromString('foo, r=[0, 100, 2]');
+    expect(s['r']).toEqual({ min: 0, max: 100, step: 2 });
+  });
+
+  it('returns undefined for a missing field', () => {
+    const s = GstStructure.fromString('foo, x=1');
+    expect(s['nonexistent']).toBeUndefined();
+  });
+
+  it('class properties take precedence over field names', () => {
+    // 'name' is a class property; a field also called 'name' should not shadow it
+    const s = GstStructure.fromString('mystruct, name=shadowed');
+    expect(s.name).toBe('mystruct');
+    // Access via getTyped to get the actual field
+    expect(s.getTyped('name')).toEqual({ type: 'string', value: 'shadowed' });
+  });
+
+  it('getTyped returns the full typed Value', () => {
+    const s = GstStructure.fromString('foo, width=1920');
+    expect(s.getTyped('width')).toEqual({ type: 'int', value: 1920 });
+  });
+
+  it('toString serializes back to a GstStructure string', () => {
+    const s = GstStructure.fromString('seek, start=5.0');
+    const str = s.toString();
+    expect(str).toContain('seek');
+    expect(str).toContain('start=');
+    // Re-parseable
+    const s2 = GstStructure.fromString(str);
+    expect(s2['start']).toBe(5.0);
+  });
+
+  it('nested structure field unwraps to a GstStructure', () => {
+    const s = GstStructure.fromString('outer, inner=(GstStructure)"inner-struct, n=(int)1;"');
+    const inner = s['inner'];
+    expect(inner).toBeInstanceOf(GstStructure);
+    if (inner instanceof GstStructure) {
+      expect(inner.name).toBe('inner-struct');
+      expect(inner['n']).toBe(1);
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// unwrapValue
+// ---------------------------------------------------------------------------
+
+describe('unwrapValue', () => {
+  it('unwraps int', () => expect(unwrapValue({ type: 'int', value: 7 })).toBe(7));
+  it('unwraps double', () => expect(unwrapValue({ type: 'double', value: 3.14 })).toBe(3.14));
+  it('unwraps string', () => expect(unwrapValue({ type: 'string', value: 'hi' })).toBe('hi'));
+  it('unwraps boolean', () => expect(unwrapValue({ type: 'boolean', value: true })).toBe(true));
+  it('unwraps bitmask', () => expect(unwrapValue({ type: 'bitmask', value: 5n })).toBe(5n));
+  it('unwraps fraction', () => {
+    expect(unwrapValue({ type: 'fraction', numerator: 1, denominator: 2 }))
+      .toEqual({ numerator: 1, denominator: 2 });
+  });
+  it('unwraps flags', () => {
+    expect(unwrapValue({ type: 'flags', flags: ['a', 'b'] })).toEqual(['a', 'b']);
+  });
+  it('unwraps typed by delegating to inner value', () => {
+    expect(unwrapValue({ type: 'typed', typeName: 'MyType', value: { type: 'int', value: 99 } }))
+      .toBe(99);
   });
 });
