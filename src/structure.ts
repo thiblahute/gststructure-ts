@@ -50,7 +50,7 @@ export function unwrapValue(v: Value): unknown {
 // ---------------------------------------------------------------------------
 
 /**
- * A GstStructure with dict-like field access.
+ * A GstStructure with dict-like and map-like field access.
  *
  * Fields can be accessed by name using bracket notation, returning plain
  * JavaScript values (numbers, strings, booleans, etc.) without the typed
@@ -63,12 +63,20 @@ export function unwrapValue(v: Value): unknown {
  * s['format']  // → 'I420' (string)
  * s.name       // → 'video/x-raw'
  *
+ * // Safe access for any key, including those that clash with class properties
+ * s.get('name')   // → value of the 'name' field, not the structure type name
+ * s.get('width')  // → 1920
+ *
+ * // Enumerate and iterate fields
+ * [...s.keys()]   // → ['format', 'width']
+ * for (const [k, v] of s) console.log(k, v);
+ *
  * // Typed access when you need the full value object
  * s.getTyped('width') // → { type: 'int', value: 1920 }
  * ```
  *
- * Field names that clash with class properties (`name`, `fields`, `getTyped`,
- * `toString`) must be accessed via `getTyped()`.
+ * Field names that clash with class properties (`name`, `fields`, `get`,
+ * `keys`, `getTyped`, `toString`) must be accessed via `get()` or `getTyped()`.
  */
 export class GstStructure implements Structure {
   readonly name: string;
@@ -101,6 +109,41 @@ export class GstStructure implements Structure {
     const p = new Parser(s.trim());
     const { name, fields } = p.parseStructure();
     return new GstStructure(name, fields);
+  }
+
+  /**
+   * Returns the unwrapped value for the given field, or `undefined` if not
+   * present.  Unlike bracket notation, this always reads from `fields` and
+   * therefore works correctly for field names that clash with class properties
+   * (e.g. a field named `"name"`).
+   */
+  get(key: string): unknown {
+    const v = this.fields.get(key);
+    return v !== undefined ? unwrapValue(v) : undefined;
+  }
+
+  /**
+   * Returns an iterator over the field names of this structure, in insertion
+   * order — equivalent to `this.fields.keys()`.
+   */
+  keys(): IterableIterator<string> {
+    return this.fields.keys();
+  }
+
+  /**
+   * Returns an iterator over `[key, unwrappedValue]` pairs, in insertion
+   * order — equivalent to iterating `this.fields.entries()` with each value
+   * unwrapped.
+   */
+  [Symbol.iterator](): Iterator<[string, unknown]> {
+    const iter = this.fields.entries();
+    return {
+      next(): IteratorResult<[string, unknown]> {
+        const { value, done } = iter.next();
+        if (done) return { value: undefined as unknown as [string, unknown], done: true };
+        return { value: [value[0], unwrapValue(value[1])], done: false };
+      },
+    };
   }
 
   /**

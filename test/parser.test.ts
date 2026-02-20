@@ -799,6 +799,75 @@ describe('GstStructure – dict-like field access', () => {
 });
 
 // ---------------------------------------------------------------------------
+// GstStructure – get(), keys(), [Symbol.iterator]()
+// ---------------------------------------------------------------------------
+
+describe('GstStructure – get()', () => {
+  it('returns the unwrapped value for a regular field', () => {
+    const s = GstStructure.fromString('foo, width=1920');
+    expect(s.get('width')).toBe(1920);
+  });
+
+  it('returns undefined for a missing field', () => {
+    const s = GstStructure.fromString('foo, x=1');
+    expect(s.get('nonexistent')).toBeUndefined();
+  });
+
+  it('reads a field named "name" without returning the structure type name', () => {
+    const s = GstStructure.fromString('mystruct, name=shadowed');
+    expect(s.get('name')).toBe('shadowed');
+    // Bracket notation and .name still return the structure type name
+    expect(s.name).toBe('mystruct');
+  });
+
+  it('reads a field named "fields"', () => {
+    const s = GstStructure.fromString('foo, fields=(int)42');
+    expect(s.get('fields')).toBe(42);
+  });
+
+  it('reads a field named "keys"', () => {
+    const s = GstStructure.fromString('foo, keys=hello');
+    expect(s.get('keys')).toBe('hello');
+  });
+});
+
+describe('GstStructure – keys()', () => {
+  it('returns an iterator over field names in insertion order', () => {
+    const s = GstStructure.fromString('foo, width=1920, height=1080, format=I420');
+    expect([...s.keys()]).toEqual(['width', 'height', 'format']);
+  });
+
+  it('returns an empty iterator for a structure with no fields', () => {
+    const s = GstStructure.fromString('bare');
+    expect([...s.keys()]).toEqual([]);
+  });
+});
+
+describe('GstStructure – [Symbol.iterator]()', () => {
+  it('iterates [key, unwrappedValue] pairs in insertion order', () => {
+    const s = GstStructure.fromString('foo, width=1920, format=I420, active=true');
+    const entries = [...s];
+    expect(entries).toEqual([
+      ['width', 1920],
+      ['format', 'I420'],
+      ['active', true],
+    ]);
+  });
+
+  it('iterates nothing for a structure with no fields', () => {
+    const s = GstStructure.fromString('bare');
+    expect([...s]).toEqual([]);
+  });
+
+  it('unwraps fraction values in iteration', () => {
+    const s = GstStructure.fromString('foo, fps=30/1');
+    const [[k, v]] = [...s];
+    expect(k).toBe('fps');
+    expect(v).toEqual({ numerator: 30, denominator: 1 });
+  });
+});
+
+// ---------------------------------------------------------------------------
 // unwrapValue
 // ---------------------------------------------------------------------------
 
