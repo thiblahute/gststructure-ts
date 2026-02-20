@@ -61,27 +61,27 @@ describe('Structure – basic names', () => {
 describe('Structure – integer values', () => {
   it('parses a positive integer', () => {
     const s = parseStructure('seek, start=5');
-    expect(field(s!, 'start')).toEqual({ kind: 'int', value: 5 });
+    expect(field(s!, 'start')).toEqual({ type: 'int', value: 5 });
   });
 
   it('parses a negative integer', () => {
     const s = parseStructure('foo, x=-42');
-    expect(field(s!, 'x')).toEqual({ kind: 'int', value: -42 });
+    expect(field(s!, 'x')).toEqual({ type: 'int', value: -42 });
   });
 
   it('parses a hex number (0x prefix) as int', () => {
     const s = parseStructure('foo, v=0xFF');
-    expect(field(s!, 'v')).toEqual({ kind: 'int', value: 255 });
+    expect(field(s!, 'v')).toEqual({ type: 'int', value: 255 });
   });
 
   it('parses an explicitly typed int', () => {
     const s = parseStructure('foo, v=(int)42');
-    expect(field(s!, 'v')).toEqual({ kind: 'int', value: 42 });
+    expect(field(s!, 'v')).toEqual({ type: 'int', value: 42 });
   });
 
   it('parses an explicitly typed gint64', () => {
     const s = parseStructure('foo, n=(gint64)9000000000');
-    expect(field(s!, 'n')).toEqual({ kind: 'int', value: 9000000000 });
+    expect(field(s!, 'n')).toEqual({ type: 'int', value: 9000000000 });
   });
 });
 
@@ -92,32 +92,32 @@ describe('Structure – integer values', () => {
 describe('Structure – double values', () => {
   it('parses a positive float', () => {
     const s = parseStructure('seek, start=5.0');
-    expect(field(s!, 'start')).toEqual({ kind: 'double', value: 5.0 });
+    expect(field(s!, 'start')).toEqual({ type: 'double', value: 5.0 });
   });
 
   it('parses a float with only fractional part', () => {
     const s = parseStructure('foo, x=.5');
-    expect(field(s!, 'x')).toEqual({ kind: 'double', value: 0.5 });
+    expect(field(s!, 'x')).toEqual({ type: 'double', value: 0.5 });
   });
 
   it('parses a negative float', () => {
     const s = parseStructure('foo, x=-3.14');
-    expect(field(s!, 'x')).toEqual({ kind: 'double', value: -3.14 });
+    expect(field(s!, 'x')).toEqual({ type: 'double', value: -3.14 });
   });
 
   it('parses an explicitly typed float', () => {
     const s = parseStructure('set-property, value=(float)1.0');
-    expect(field(s!, 'value')).toEqual({ kind: 'double', value: 1.0 });
+    expect(field(s!, 'value')).toEqual({ type: 'double', value: 1.0 });
   });
 
   it('parses an explicitly typed double', () => {
     const s = parseStructure('foo, d=(double)2.718');
-    expect(field(s!, 'd')).toEqual({ kind: 'double', value: 2.718 });
+    expect(field(s!, 'd')).toEqual({ type: 'double', value: 2.718 });
   });
 
   it('coerces (double) from int token', () => {
     const s = parseStructure('foo, d=(double)3');
-    expect(field(s!, 'd')).toEqual({ kind: 'double', value: 3 });
+    expect(field(s!, 'd')).toEqual({ type: 'double', value: 3 });
   });
 });
 
@@ -128,30 +128,30 @@ describe('Structure – double values', () => {
 describe('Structure – boolean values', () => {
   it('parses true', () => {
     const s = parseStructure('meta, handles-states=true');
-    expect(field(s!, 'handles-states')).toEqual({ kind: 'boolean', value: true });
+    expect(field(s!, 'handles-states')).toEqual({ type: 'boolean', value: true });
   });
 
   it('parses false', () => {
     const s = parseStructure('meta, seek=false');
-    expect(field(s!, 'seek')).toEqual({ kind: 'boolean', value: false });
+    expect(field(s!, 'seek')).toEqual({ type: 'boolean', value: false });
   });
 
   it('parses yes/no aliases', () => {
     const s = parseStructure('meta, a=yes, b=NO');
-    expect(field(s!, 'a')).toEqual({ kind: 'boolean', value: true });
-    expect(field(s!, 'b')).toEqual({ kind: 'boolean', value: false });
+    expect(field(s!, 'a')).toEqual({ type: 'boolean', value: true });
+    expect(field(s!, 'b')).toEqual({ type: 'boolean', value: false });
   });
 
   it('parses t/f aliases (case insensitive)', () => {
     const s = parseStructure('meta, c=t, d=F');
-    expect(field(s!, 'c')).toEqual({ kind: 'boolean', value: true });
-    expect(field(s!, 'd')).toEqual({ kind: 'boolean', value: false });
+    expect(field(s!, 'c')).toEqual({ type: 'boolean', value: true });
+    expect(field(s!, 'd')).toEqual({ type: 'boolean', value: false });
   });
 
   it('parses explicitly typed bool with numeric 1/0', () => {
     const s = parseStructure('meta, enabled=(bool)1, disabled=(bool)0');
-    expect(field(s!, 'enabled')).toEqual({ kind: 'boolean', value: true });
-    expect(field(s!, 'disabled')).toEqual({ kind: 'boolean', value: false });
+    expect(field(s!, 'enabled')).toEqual({ type: 'boolean', value: true });
+    expect(field(s!, 'disabled')).toEqual({ type: 'boolean', value: false });
   });
 });
 
@@ -162,32 +162,32 @@ describe('Structure – boolean values', () => {
 describe('Structure – string values', () => {
   it('parses a quoted string', () => {
     const s = parseStructure('checkpoint, text="Hello World"');
-    expect(field(s!, 'text')).toEqual({ kind: 'string', value: 'Hello World' });
+    expect(field(s!, 'text')).toEqual({ type: 'string', value: 'Hello World' });
   });
 
   it('handles escape sequences in quoted strings', () => {
     const s = parseStructure('foo, s="line1\\nline2"');
-    expect(field(s!, 's')).toEqual({ kind: 'string', value: 'line1\nline2' });
+    expect(field(s!, 's')).toEqual({ type: 'string', value: 'line1\nline2' });
   });
 
   it('handles escaped quotes inside quoted strings', () => {
     const s = parseStructure('foo, s="say \\"hi\\""');
-    expect(field(s!, 's')).toEqual({ kind: 'string', value: 'say "hi"' });
+    expect(field(s!, 's')).toEqual({ type: 'string', value: 'say "hi"' });
   });
 
   it('parses an unquoted string (fallback)', () => {
     const s = parseStructure('foo, format=I420');
-    expect(field(s!, 'format')).toEqual({ kind: 'string', value: 'I420' });
+    expect(field(s!, 'format')).toEqual({ type: 'string', value: 'I420' });
   });
 
   it('parses unquoted string with colon (e.g. pad reference)', () => {
     const s = parseStructure('config, sink=videosink:sink');
-    expect(field(s!, 'sink')).toEqual({ kind: 'string', value: 'videosink:sink' });
+    expect(field(s!, 'sink')).toEqual({ type: 'string', value: 'videosink:sink' });
   });
 
   it('parses explicitly typed (string) coercion', () => {
     const s = parseStructure('foo, field-is-string=(string)true');
-    expect(field(s!, 'field-is-string')).toEqual({ kind: 'string', value: 'true' });
+    expect(field(s!, 'field-is-string')).toEqual({ type: 'string', value: 'true' });
   });
 });
 
@@ -198,12 +198,12 @@ describe('Structure – string values', () => {
 describe('Structure – fraction values', () => {
   it('parses a fraction', () => {
     const s = parseStructure('set-property, framerate=30/1');
-    expect(field(s!, 'framerate')).toEqual({ kind: 'fraction', numerator: 30, denominator: 1 });
+    expect(field(s!, 'framerate')).toEqual({ type: 'fraction', numerator: 30, denominator: 1 });
   });
 
   it('parses an explicitly typed fraction', () => {
     const s = parseStructure('foo, f=(fraction)1/2');
-    expect(field(s!, 'f')).toEqual({ kind: 'fraction', numerator: 1, denominator: 2 });
+    expect(field(s!, 'f')).toEqual({ type: 'fraction', numerator: 1, denominator: 2 });
   });
 });
 
@@ -214,7 +214,7 @@ describe('Structure – fraction values', () => {
 describe('Structure – bitmask values', () => {
   it('parses an explicitly typed bitmask', () => {
     const s = parseStructure('set-caps, mask=(bitmask)0x67');
-    expect(field(s!, 'mask')).toEqual({ kind: 'bitmask', value: 0x67n });
+    expect(field(s!, 'mask')).toEqual({ type: 'bitmask', value: 0x67n });
   });
 });
 
@@ -226,17 +226,17 @@ describe('Structure – flags values', () => {
   it('parses a single-flag (bare identifier treated as string, not flag)', () => {
     const s = parseStructure('seek, flags=accurate');
     // A single word without '+' is a plain string
-    expect(field(s!, 'flags')).toEqual({ kind: 'string', value: 'accurate' });
+    expect(field(s!, 'flags')).toEqual({ type: 'string', value: 'accurate' });
   });
 
   it('parses multiple flags joined by +', () => {
     const s = parseStructure('seek, start=5.0, stop=10.0, flags=flush+accurate');
-    expect(field(s!, 'flags')).toEqual({ kind: 'flags', flags: ['flush', 'accurate'] });
+    expect(field(s!, 'flags')).toEqual({ type: 'flags', flags: ['flush', 'accurate'] });
   });
 
   it('parses three flags', () => {
     const s = parseStructure('foo, f=a+b+c');
-    expect(field(s!, 'f')).toEqual({ kind: 'flags', flags: ['a', 'b', 'c'] });
+    expect(field(s!, 'f')).toEqual({ type: 'flags', flags: ['a', 'b', 'c'] });
   });
 });
 
@@ -248,11 +248,11 @@ describe('Structure – list and array values', () => {
   it('parses a GstValueList { }', () => {
     const s = parseStructure('foo, opts={1, 2, 3}');
     expect(field(s!, 'opts')).toEqual({
-      kind: 'list',
+      type: 'list',
       items: [
-        { kind: 'int', value: 1 },
-        { kind: 'int', value: 2 },
-        { kind: 'int', value: 3 },
+        { type: 'int', value: 1 },
+        { type: 'int', value: 2 },
+        { type: 'int', value: 3 },
       ],
     });
   });
@@ -260,11 +260,11 @@ describe('Structure – list and array values', () => {
   it('parses a GstValueArray < >', () => {
     const s = parseStructure('foo, arr=<1, 2, 3>');
     expect(field(s!, 'arr')).toEqual({
-      kind: 'array',
+      type: 'array',
       items: [
-        { kind: 'int', value: 1 },
-        { kind: 'int', value: 2 },
-        { kind: 'int', value: 3 },
+        { type: 'int', value: 1 },
+        { type: 'int', value: 2 },
+        { type: 'int', value: 3 },
       ],
     });
   });
@@ -272,11 +272,11 @@ describe('Structure – list and array values', () => {
   it('parses a list with mixed types', () => {
     const s = parseStructure('foo, v={"hello", 42, true}');
     expect(field(s!, 'v')).toEqual({
-      kind: 'list',
+      type: 'list',
       items: [
-        { kind: 'string', value: 'hello' },
-        { kind: 'int', value: 42 },
-        { kind: 'boolean', value: true },
+        { type: 'string', value: 'hello' },
+        { type: 'int', value: 42 },
+        { type: 'boolean', value: true },
       ],
     });
   });
@@ -290,9 +290,9 @@ describe('Structure – range values', () => {
   it('parses an int range', () => {
     const s = parseStructure('foo, r=[1, 100]');
     expect(field(s!, 'r')).toEqual({
-      kind: 'range',
-      min: { kind: 'int', value: 1 },
-      max: { kind: 'int', value: 100 },
+      type: 'range',
+      min: { type: 'int', value: 1 },
+      max: { type: 'int', value: 100 },
       step: undefined,
     });
   });
@@ -300,19 +300,19 @@ describe('Structure – range values', () => {
   it('parses a range with step', () => {
     const s = parseStructure('foo, r=[0, 255, 2]');
     expect(field(s!, 'r')).toEqual({
-      kind: 'range',
-      min: { kind: 'int', value: 0 },
-      max: { kind: 'int', value: 255 },
-      step: { kind: 'int', value: 2 },
+      type: 'range',
+      min: { type: 'int', value: 0 },
+      max: { type: 'int', value: 255 },
+      step: { type: 'int', value: 2 },
     });
   });
 
   it('parses a fraction range', () => {
     const s = parseStructure('foo, fps=[15/1, 60/1]');
     expect(field(s!, 'fps')).toEqual({
-      kind: 'range',
-      min: { kind: 'fraction', numerator: 15, denominator: 1 },
-      max: { kind: 'fraction', numerator: 60, denominator: 1 },
+      type: 'range',
+      min: { type: 'fraction', numerator: 15, denominator: 1 },
+      max: { type: 'fraction', numerator: 60, denominator: 1 },
       step: undefined,
     });
   });
@@ -326,38 +326,38 @@ describe('Structure – nested structure and caps', () => {
   it('parses (GstStructure)"name, field=value;"', () => {
     const s = parseStructure('outer, inner=(GstStructure)"inner-struct, n=(int)1;"');
     const inner = field(s!, 'inner');
-    expect(inner.kind).toBe('structure');
-    if (inner.kind === 'structure') {
+    expect(inner.type).toBe('structure');
+    if (inner.type === 'structure') {
       expect(inner.value.name).toBe('inner-struct');
-      expect(inner.value.fields.get('n')).toEqual({ kind: 'int', value: 1 });
+      expect(inner.value.fields.get('n')).toEqual({ type: 'int', value: 1 });
     }
   });
 
   it('parses (GstCaps)"video/x-raw" as caps value', () => {
     const s = parseStructure('seek, caps=(GstCaps)"video/x-raw"');
     const caps = field(s!, 'caps');
-    expect(caps.kind).toBe('caps');
-    if (caps.kind === 'caps') {
-      expect(caps.value.kind).toBe('structures');
+    expect(caps.type).toBe('caps');
+    if (caps.type === 'caps') {
+      expect(caps.value.type).toBe('structures');
     }
   });
 
   it('parses (caps)"audio/x-raw" (lowercase alias)', () => {
     const s = parseStructure('seek, caps=(caps)"audio/x-raw"');
     const caps = field(s!, 'caps');
-    expect(caps.kind).toBe('caps');
+    expect(caps.type).toBe('caps');
   });
 
   it('parses (GstCaps)[video/x-raw, format=I420] bracket syntax', () => {
     const s = parseStructure('set-caps, caps=(GstCaps)[video/x-raw, format=I420]');
     const caps = field(s!, 'caps');
-    expect(caps.kind).toBe('caps');
-    if (caps.kind === 'caps') {
-      expect(caps.value.kind).toBe('structures');
-      if (caps.value.kind === 'structures') {
+    expect(caps.type).toBe('caps');
+    if (caps.type === 'caps') {
+      expect(caps.value.type).toBe('structures');
+      if (caps.value.type === 'structures') {
         expect(caps.value.entries[0].structure.name).toBe('video/x-raw');
         expect(caps.value.entries[0].structure.fields.get('format')).toEqual({
-          kind: 'string',
+          type: 'string',
           value: 'I420',
         });
       }
@@ -372,12 +372,12 @@ describe('Structure – nested structure and caps', () => {
 describe('Structure – field name syntax', () => {
   it('parses a field with :: path separator', () => {
     const s = parseStructure('set-properties, element::property=50');
-    expect(field(s!, 'element::property')).toEqual({ kind: 'int', value: 50 });
+    expect(field(s!, 'element::property')).toEqual({ type: 'int', value: 50 });
   });
 
   it('parses a field with element.pad::property path', () => {
     const s = parseStructure('check-properties, compositor.sink_0::xpos=100');
-    expect(field(s!, 'compositor.sink_0::xpos')).toEqual({ kind: 'int', value: 100 });
+    expect(field(s!, 'compositor.sink_0::xpos')).toEqual({ type: 'int', value: 100 });
   });
 
   it('parses a hyphenated field name', () => {
@@ -394,7 +394,7 @@ describe('Structure – whitespace and edge cases', () => {
   it('ignores leading/trailing whitespace', () => {
     const s = parseStructure('  seek , start = 5.0  ');
     expect(s!.name).toBe('seek');
-    expect(field(s!, 'start')).toEqual({ kind: 'double', value: 5.0 });
+    expect(field(s!, 'start')).toEqual({ type: 'double', value: 5.0 });
   });
 
   it('handles trailing comma in field list', () => {
@@ -405,9 +405,9 @@ describe('Structure – whitespace and edge cases', () => {
   it('handles multiple fields', () => {
     const s = parseStructure('seek, start=5.0, stop=10.0, flags=flush+accurate');
     expect(s!.fields.size).toBe(3);
-    expect(field(s!, 'start')).toEqual({ kind: 'double', value: 5.0 });
-    expect(field(s!, 'stop')).toEqual({ kind: 'double', value: 10.0 });
-    expect(field(s!, 'flags')).toEqual({ kind: 'flags', flags: ['flush', 'accurate'] });
+    expect(field(s!, 'start')).toEqual({ type: 'double', value: 5.0 });
+    expect(field(s!, 'stop')).toEqual({ type: 'double', value: 10.0 });
+    expect(field(s!, 'flags')).toEqual({ type: 'flags', flags: ['flush', 'accurate'] });
   });
 });
 
@@ -417,23 +417,23 @@ describe('Structure – whitespace and edge cases', () => {
 
 describe('Caps – special values', () => {
   it('parses ANY', () => {
-    expect(parseCaps('ANY')).toEqual({ kind: 'any' });
+    expect(parseCaps('ANY')).toEqual({ type: 'any' });
   });
 
   it('parses EMPTY', () => {
-    expect(parseCaps('EMPTY')).toEqual({ kind: 'empty' });
+    expect(parseCaps('EMPTY')).toEqual({ type: 'empty' });
   });
 
   it('parses NONE', () => {
-    expect(parseCaps('NONE')).toEqual({ kind: 'empty' });
+    expect(parseCaps('NONE')).toEqual({ type: 'empty' });
   });
 });
 
 describe('Caps – single structure', () => {
   it('parses a bare media type', () => {
     const caps = parseCaps('video/x-raw');
-    expect(caps!.kind).toBe('structures');
-    if (caps!.kind === 'structures') {
+    expect(caps!.type).toBe('structures');
+    if (caps!.type === 'structures') {
       expect(caps!.entries.length).toBe(1);
       expect(caps!.entries[0].structure.name).toBe('video/x-raw');
       expect(caps!.entries[0].features).toEqual([]);
@@ -442,21 +442,21 @@ describe('Caps – single structure', () => {
 
   it('parses a structure with fields', () => {
     const caps = parseCaps('video/x-raw, format=I420, width=1920, height=1080');
-    expect(caps!.kind).toBe('structures');
-    if (caps!.kind === 'structures') {
+    expect(caps!.type).toBe('structures');
+    if (caps!.type === 'structures') {
       const s = caps!.entries[0].structure;
       expect(s.name).toBe('video/x-raw');
-      expect(s.fields.get('format')).toEqual({ kind: 'string', value: 'I420' });
-      expect(s.fields.get('width')).toEqual({ kind: 'int', value: 1920 });
-      expect(s.fields.get('height')).toEqual({ kind: 'int', value: 1080 });
+      expect(s.fields.get('format')).toEqual({ type: 'string', value: 'I420' });
+      expect(s.fields.get('width')).toEqual({ type: 'int', value: 1920 });
+      expect(s.fields.get('height')).toEqual({ type: 'int', value: 1080 });
     }
   });
 
   it('parses framerate as a fraction', () => {
     const caps = parseCaps('video/x-raw, framerate=30/1');
-    if (caps!.kind === 'structures') {
+    if (caps!.type === 'structures') {
       expect(caps!.entries[0].structure.fields.get('framerate')).toEqual({
-        kind: 'fraction',
+        type: 'fraction',
         numerator: 30,
         denominator: 1,
       });
@@ -465,9 +465,9 @@ describe('Caps – single structure', () => {
 
   it('parses a framerate range', () => {
     const caps = parseCaps('video/x-raw, framerate=[15/1, 60/1]');
-    if (caps!.kind === 'structures') {
+    if (caps!.type === 'structures') {
       const fr = caps!.entries[0].structure.fields.get('framerate');
-      expect(fr?.kind).toBe('range');
+      expect(fr?.type).toBe('range');
     }
   });
 });
@@ -475,8 +475,8 @@ describe('Caps – single structure', () => {
 describe('Caps – capability features', () => {
   it('parses a single feature', () => {
     const caps = parseCaps('video/x-raw(memory:DMABuf), format=NV12');
-    expect(caps!.kind).toBe('structures');
-    if (caps!.kind === 'structures') {
+    expect(caps!.type).toBe('structures');
+    if (caps!.type === 'structures') {
       expect(caps!.entries[0].features).toEqual(['memory:DMABuf']);
       expect(caps!.entries[0].structure.name).toBe('video/x-raw');
     }
@@ -484,7 +484,7 @@ describe('Caps – capability features', () => {
 
   it('parses multiple features', () => {
     const caps = parseCaps('video/x-raw(memory:DMABuf, meta:VideoMeta)');
-    if (caps!.kind === 'structures') {
+    if (caps!.type === 'structures') {
       expect(caps!.entries[0].features).toEqual(['memory:DMABuf', 'meta:VideoMeta']);
     }
   });
@@ -493,8 +493,8 @@ describe('Caps – capability features', () => {
 describe('Caps – multiple structures', () => {
   it('parses two structures separated by semicolon', () => {
     const caps = parseCaps('video/x-raw, format=I420; audio/x-raw, rate=44100');
-    expect(caps!.kind).toBe('structures');
-    if (caps!.kind === 'structures') {
+    expect(caps!.type).toBe('structures');
+    if (caps!.type === 'structures') {
       expect(caps!.entries.length).toBe(2);
       expect(caps!.entries[0].structure.name).toBe('video/x-raw');
       expect(caps!.entries[1].structure.name).toBe('audio/x-raw');
@@ -503,14 +503,14 @@ describe('Caps – multiple structures', () => {
 
   it('parses three structures', () => {
     const caps = parseCaps('video/x-raw; audio/x-raw; application/x-rtp');
-    if (caps!.kind === 'structures') {
+    if (caps!.type === 'structures') {
       expect(caps!.entries.length).toBe(3);
     }
   });
 
   it('handles whitespace around semicolons', () => {
     const caps = parseCaps('video/x-raw ; audio/x-raw');
-    if (caps!.kind === 'structures') {
+    if (caps!.type === 'structures') {
       expect(caps!.entries.length).toBe(2);
     }
   });
@@ -522,48 +522,48 @@ describe('Caps – multiple structures', () => {
 
 describe('Serialization – valueToString', () => {
   it('serializes int', () => {
-    expect(valueToString({ kind: 'int', value: 42 })).toBe('(int)42');
+    expect(valueToString({ type: 'int', value: 42 })).toBe('(int)42');
   });
 
   it('serializes double with decimal', () => {
-    expect(valueToString({ kind: 'double', value: 5.0 })).toBe('(double)5.0');
+    expect(valueToString({ type: 'double', value: 5.0 })).toBe('(double)5.0');
   });
 
   it('serializes double with non-trivial value', () => {
-    expect(valueToString({ kind: 'double', value: 3.14 })).toBe('(double)3.14');
+    expect(valueToString({ type: 'double', value: 3.14 })).toBe('(double)3.14');
   });
 
   it('serializes string with quotes', () => {
-    expect(valueToString({ kind: 'string', value: 'hello' })).toBe('"hello"');
+    expect(valueToString({ type: 'string', value: 'hello' })).toBe('"hello"');
   });
 
   it('escapes special characters in strings', () => {
-    expect(valueToString({ kind: 'string', value: 'a"b\\c' })).toBe('"a\\"b\\\\c"');
+    expect(valueToString({ type: 'string', value: 'a"b\\c' })).toBe('"a\\"b\\\\c"');
   });
 
   it('serializes boolean true', () => {
-    expect(valueToString({ kind: 'boolean', value: true })).toBe('(boolean)true');
+    expect(valueToString({ type: 'boolean', value: true })).toBe('(boolean)true');
   });
 
   it('serializes fraction', () => {
-    expect(valueToString({ kind: 'fraction', numerator: 30, denominator: 1 })).toBe('(fraction)30/1');
+    expect(valueToString({ type: 'fraction', numerator: 30, denominator: 1 })).toBe('(fraction)30/1');
   });
 
   it('serializes bitmask', () => {
-    expect(valueToString({ kind: 'bitmask', value: 0x67n })).toBe('(bitmask)0x67');
+    expect(valueToString({ type: 'bitmask', value: 0x67n })).toBe('(bitmask)0x67');
   });
 
   it('serializes flags', () => {
-    expect(valueToString({ kind: 'flags', flags: ['flush', 'accurate'] })).toBe('flush+accurate');
+    expect(valueToString({ type: 'flags', flags: ['flush', 'accurate'] })).toBe('flush+accurate');
   });
 
   it('serializes a list', () => {
     expect(
       valueToString({
-        kind: 'list',
+        type: 'list',
         items: [
-          { kind: 'int', value: 1 },
-          { kind: 'int', value: 2 },
+          { type: 'int', value: 1 },
+          { type: 'int', value: 2 },
         ],
       }),
     ).toBe('{ (int)1, (int)2 }');
@@ -572,8 +572,8 @@ describe('Serialization – valueToString', () => {
   it('serializes an array', () => {
     expect(
       valueToString({
-        kind: 'array',
-        items: [{ kind: 'string', value: 'a' }, { kind: 'string', value: 'b' }],
+        type: 'array',
+        items: [{ type: 'string', value: 'a' }, { type: 'string', value: 'b' }],
       }),
     ).toBe('< "a", "b" >');
   });
@@ -581,9 +581,9 @@ describe('Serialization – valueToString', () => {
   it('serializes a range without step', () => {
     expect(
       valueToString({
-        kind: 'range',
-        min: { kind: 'int', value: 0 },
-        max: { kind: 'int', value: 255 },
+        type: 'range',
+        min: { type: 'int', value: 0 },
+        max: { type: 'int', value: 255 },
       }),
     ).toBe('[ (int)0, (int)255 ]');
   });
@@ -599,7 +599,7 @@ describe('Serialization – structureToString', () => {
     // Re-parse the serialized form
     const s2 = parseStructure(out)!;
     expect(s2.name).toBe('seek');
-    expect(s2.fields.get('start')).toEqual({ kind: 'double', value: 5.0 });
+    expect(s2.fields.get('start')).toEqual({ type: 'double', value: 5.0 });
   });
 
   it('round-trips a structure with multiple fields', () => {
@@ -613,19 +613,19 @@ describe('Serialization – structureToString', () => {
 
 describe('Serialization – capsToString', () => {
   it('serializes ANY', () => {
-    expect(capsToString({ kind: 'any' })).toBe('ANY');
+    expect(capsToString({ type: 'any' })).toBe('ANY');
   });
 
   it('serializes EMPTY', () => {
-    expect(capsToString({ kind: 'empty' })).toBe('EMPTY');
+    expect(capsToString({ type: 'empty' })).toBe('EMPTY');
   });
 
   it('round-trips caps with one structure', () => {
     const caps = parseCaps('video/x-raw, format=I420')!;
     const out = capsToString(caps);
     const caps2 = parseCaps(out)!;
-    expect(caps2.kind).toBe('structures');
-    if (caps2.kind === 'structures') {
+    expect(caps2.type).toBe('structures');
+    if (caps2.type === 'structures') {
       expect(caps2.entries[0].structure.name).toBe('video/x-raw');
     }
   });
@@ -635,7 +635,7 @@ describe('Serialization – capsToString', () => {
     const out = capsToString(caps);
     expect(out).toContain('memory:DMABuf');
     const caps2 = parseCaps(out)!;
-    if (caps2.kind === 'structures') {
+    if (caps2.type === 'structures') {
       expect(caps2.entries[0].features).toEqual(['memory:DMABuf']);
     }
   });
@@ -644,7 +644,7 @@ describe('Serialization – capsToString', () => {
     const caps = parseCaps('video/x-raw, format=I420; audio/x-raw, rate=44100')!;
     const out = capsToString(caps);
     const caps2 = parseCaps(out)!;
-    if (caps2.kind === 'structures') {
+    if (caps2.type === 'structures') {
       expect(caps2.entries.length).toBe(2);
       expect(caps2.entries[0].structure.name).toBe('video/x-raw');
       expect(caps2.entries[1].structure.name).toBe('audio/x-raw');

@@ -21,62 +21,62 @@ export type Value =
 
 /** A GLib integer (gint, guint, gint64, etc.) */
 export interface IntValue {
-  kind: 'int';
+  type: 'int';
   value: number;
 }
 
 /** A GLib floating-point number (gdouble, gfloat) */
 export interface DoubleValue {
-  kind: 'double';
+  type: 'double';
   value: number;
 }
 
 /** A GLib string (gchararray) */
 export interface StringValue {
-  kind: 'string';
+  type: 'string';
   value: string;
 }
 
 /** A GLib boolean (gboolean) */
 export interface BooleanValue {
-  kind: 'boolean';
+  type: 'boolean';
   value: boolean;
 }
 
 /** A GstFraction value (numerator/denominator) */
 export interface FractionValue {
-  kind: 'fraction';
+  type: 'fraction';
   numerator: number;
   denominator: number;
 }
 
 /** A GstBitmask value (64-bit bitmask, stored as BigInt) */
 export interface BitmaskValue {
-  kind: 'bitmask';
+  type: 'bitmask';
   value: bigint;
 }
 
 /** A flags value (flag1+flag2+flag3) */
 export interface FlagsValue {
-  kind: 'flags';
+  type: 'flags';
   flags: string[];
 }
 
 /** A GstValueList: { item1, item2, ... } */
 export interface ListValue {
-  kind: 'list';
+  type: 'list';
   items: Value[];
 }
 
 /** A GstValueArray: < item1, item2, ... > */
 export interface ArrayValue {
-  kind: 'array';
+  type: 'array';
   items: Value[];
 }
 
 /** A range value: [ min, max ] or [ min, max, step ] */
 export interface RangeValue {
-  kind: 'range';
+  type: 'range';
   min: Value;
   max: Value;
   step?: Value;
@@ -84,19 +84,19 @@ export interface RangeValue {
 
 /** A nested GstStructure */
 export interface StructureValue {
-  kind: 'structure';
+  type: 'structure';
   value: Structure;
 }
 
 /** A nested GstCaps */
 export interface CapsValue {
-  kind: 'caps';
+  type: 'caps';
   value: Caps;
 }
 
 /** A value with an explicit type name that wasn't fully interpreted */
 export interface TypedValue {
-  kind: 'typed';
+  type: 'typed';
   typeName: string;
   value: Value;
 }
@@ -127,6 +127,6 @@ export interface CapsEntry {
  * - `structures` → one or more structures, each describing a media type
  */
 export type Caps =
-  | { kind: 'any' }
-  | { kind: 'empty' }
-  | { kind: 'structures'; entries: CapsEntry[] };
+  | { type: 'any' }
+  | { type: 'empty' }
+  | { type: 'structures'; entries: CapsEntry[] };

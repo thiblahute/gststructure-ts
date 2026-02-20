@@ -148,7 +148,7 @@ class Parser {
     if (c === '[') return this.parseRange();
     if (c === '{') return this.parseList();
     if (c === '<') return this.parseGstArray();
-    if (c === '"') return { kind: 'string', value: this.parseQuotedString() };
+    if (c === '"') return { type: 'string', value: this.parseQuotedString() };
     return this.parseUnquoted();
   }
 
@@ -168,13 +168,13 @@ class Parser {
       const inner = this.extractBalanced('[', ']');
       const caps = parseCapsInner(inner);
       if (!caps) this.error(`Failed to parse caps: ${inner}`);
-      return { kind: 'caps', value: caps };
+      return { type: 'caps', value: caps };
     }
 
     // Parse the raw value according to the next delimiter
     let raw: Value;
     if (this.peek() === '"') {
-      raw = { kind: 'string', value: this.parseQuotedString() };
+      raw = { type: 'string', value: this.parseQuotedString() };
     } else if (this.peek() === '[') {
       raw = this.parseRange();
     } else if (this.peek() === '{') {
@@ -229,7 +229,7 @@ class Parser {
     }
 
     this.expect(']');
-    return { kind: 'range', min, max, step };
+    return { type: 'range', min, max, step };
   }
 
   /** Parse a GstValueList: { item, item, ... } */
@@ -246,7 +246,7 @@ class Parser {
       }
     }
     this.expect('}');
-    return { kind: 'list', items };
+    return { type: 'list', items };
   }
 
   /** Parse a GstValueArray: < item, item, ... > */
@@ -263,7 +263,7 @@ class Parser {
       }
     }
     this.expect('>');
-    return { kind: 'array', items };
+    return { type: 'array', items };
   }
 
   /** Parse a double-quoted string, handling backslash escape sequences. */
@@ -382,11 +382,11 @@ class Parser {
 
     if (this.tryConsume('ANY')) {
       this.skipWS();
-      return { kind: 'any' };
+      return { type: 'any' };
     }
     if (this.tryConsume('EMPTY') || this.tryConsume('NONE')) {
       this.skipWS();
-      return { kind: 'empty' };
+      return { type: 'empty' };
     }
 
     const entries: CapsEntry[] = [];
@@ -442,7 +442,7 @@ class Parser {
       }
     }
 
-    return { kind: 'structures', entries };
+    return { type: 'structures', entries };
   }
 
   parseCapsFeatureName(): string {
@@ -466,12 +466,12 @@ class Parser {
 function inferType(raw: string): Value {
   // Hexadecimal integer
   if (/^0x[0-9a-fA-F]+$/i.test(raw)) {
-    return { kind: 'int', value: Number(raw) };
+    return { type: 'int', value: Number(raw) };
   }
 
   // Integer (no decimal point or exponent)
   if (/^[+-]?[0-9]+$/.test(raw)) {
-    return { kind: 'int', value: parseInt(raw, 10) };
+    return { type: 'int', value: parseInt(raw, 10) };
   }
 
   // Floating-point
@@ -479,14 +479,14 @@ function inferType(raw: string): Value {
     /^[+-]?(?:[0-9]+\.[0-9]*|\.[0-9]+)(?:[eE][+-]?[0-9]+)?$/.test(raw) ||
     /^[+-]?[0-9]+[eE][+-]?[0-9]+$/.test(raw)
   ) {
-    return { kind: 'double', value: parseFloat(raw) };
+    return { type: 'double', value: parseFloat(raw) };
   }
 
   // Fraction: non-negative numerator/denominator
   const fracMatch = raw.match(/^([0-9]+)\/([0-9]+)$/);
   if (fracMatch) {
     return {
-      kind: 'fraction',
+      type: 'fraction',
       numerator: parseInt(fracMatch[1], 10),
       denominator: parseInt(fracMatch[2], 10),
     };
@@ -497,20 +497,20 @@ function inferType(raw: string): Value {
     raw.includes('+') &&
     /^[a-zA-Z_][a-zA-Z0-9_-]*(\+[a-zA-Z_][a-zA-Z0-9_-]*)+$/.test(raw)
   ) {
-    return { kind: 'flags', flags: raw.split('+') };
+    return { type: 'flags', flags: raw.split('+') };
   }
 
   // Boolean keywords (case-insensitive)
   if (/^(true|false|yes|no|t|f)$/i.test(raw)) {
     const low = raw.toLowerCase();
     return {
-      kind: 'boolean',
+      type: 'boolean',
       value: low === 'true' || low === 'yes' || low === 't',
     };
   }
 
   // Fallback: unquoted string
-  return { kind: 'string', value: raw };
+  return { type: 'string', value: raw };
 }
 
 // ---------------------------------------------------------------------------
@@ -565,37 +565,37 @@ function interpretTyped(typeName: string, raw: Value): Value {
   }
 
   // Unknown/unrecognised type – preserve the type name for the caller
-  return { kind: 'typed', typeName, value: raw };
+  return { type: 'typed', typeName, value: raw };
 }
 
 function coerceInt(v: Value): Value {
-  if (v.kind === 'int') return v;
-  if (v.kind === 'double') return { kind: 'int', value: Math.trunc(v.value) };
-  if (v.kind === 'boolean') return { kind: 'int', value: v.value ? 1 : 0 };
-  if (v.kind === 'string') {
+  if (v.type === 'int') return v;
+  if (v.type === 'double') return { type: 'int', value: Math.trunc(v.value) };
+  if (v.type === 'boolean') return { type: 'int', value: v.value ? 1 : 0 };
+  if (v.type === 'string') {
     const s = v.value;
     const n = s.startsWith('0x') || s.startsWith('0X')
       ? parseInt(s, 16)
       : parseInt(s, 10);
-    return { kind: 'int', value: n };
+    return { type: 'int', value: n };
   }
   return v;
 }
 
 function coerceDouble(v: Value): Value {
-  if (v.kind === 'double') return v;
-  if (v.kind === 'int') return { kind: 'double', value: v.value };
-  if (v.kind === 'string') return { kind: 'double', value: parseFloat(v.value) };
+  if (v.type === 'double') return v;
+  if (v.type === 'int') return { type: 'double', value: v.value };
+  if (v.type === 'string') return { type: 'double', value: parseFloat(v.value) };
   return v;
 }
 
 function coerceBool(v: Value): Value {
-  if (v.kind === 'boolean') return v;
-  if (v.kind === 'int') return { kind: 'boolean', value: v.value !== 0 };
-  if (v.kind === 'string') {
+  if (v.type === 'boolean') return v;
+  if (v.type === 'int') return { type: 'boolean', value: v.value !== 0 };
+  if (v.type === 'string') {
     const low = v.value.toLowerCase();
     return {
-      kind: 'boolean',
+      type: 'boolean',
       value: low === 'true' || low === 'yes' || low === 't' || low === '1',
     };
   }
@@ -603,23 +603,23 @@ function coerceBool(v: Value): Value {
 }
 
 function coerceString(v: Value): Value {
-  if (v.kind === 'string') return v;
-  if (v.kind === 'int') return { kind: 'string', value: String(v.value) };
-  if (v.kind === 'double') return { kind: 'string', value: String(v.value) };
-  if (v.kind === 'boolean') return { kind: 'string', value: String(v.value) };
+  if (v.type === 'string') return v;
+  if (v.type === 'int') return { type: 'string', value: String(v.value) };
+  if (v.type === 'double') return { type: 'string', value: String(v.value) };
+  if (v.type === 'boolean') return { type: 'string', value: String(v.value) };
   return v;
 }
 
 function coerceBitmask(v: Value): Value {
-  if (v.kind === 'bitmask') return v;
-  if (v.kind === 'int') return { kind: 'bitmask', value: BigInt(v.value) };
-  if (v.kind === 'string') {
+  if (v.type === 'bitmask') return v;
+  if (v.type === 'int') return { type: 'bitmask', value: BigInt(v.value) };
+  if (v.type === 'string') {
     try {
       const s = v.value;
       const n = s.startsWith('0x') || s.startsWith('0X')
         ? BigInt(s)
         : BigInt(s);
-      return { kind: 'bitmask', value: n };
+      return { type: 'bitmask', value: n };
     } catch {
       return v;
     }
@@ -628,19 +628,19 @@ function coerceBitmask(v: Value): Value {
 }
 
 function coerceCaps(v: Value): Value {
-  if (v.kind === 'caps') return v;
-  if (v.kind === 'string') {
+  if (v.type === 'caps') return v;
+  if (v.type === 'string') {
     const caps = parseCapsInner(v.value);
-    if (caps) return { kind: 'caps', value: caps };
+    if (caps) return { type: 'caps', value: caps };
   }
   return v;
 }
 
 function coerceStructure(v: Value): Value {
-  if (v.kind === 'structure') return v;
-  if (v.kind === 'string') {
+  if (v.type === 'structure') return v;
+  if (v.type === 'string') {
     const s = parseStructureInner(v.value);
-    if (s) return { kind: 'structure', value: s };
+    if (s) return { type: 'structure', value: s };
   }
   return v;
 }
@@ -680,7 +680,7 @@ function parseCapsInner(s: string): Caps | null {
  * ```ts
  * const s = parseStructure('video/x-raw, format=I420, width=1920, height=1080');
  * // s?.name === 'video/x-raw'
- * // s?.fields.get('width') → { kind: 'int', value: 1920 }
+ * // s?.fields.get('width') → { type: 'int', value: 1920 }
  * ```
  *
  * @returns The parsed Structure, or `null` if the string is invalid.
@@ -710,7 +710,7 @@ export function parseStructure(s: string): Structure | null {
  * @example
  * ```ts
  * const caps = parseCaps('video/x-raw, format=I420; audio/x-raw, rate=44100');
- * // caps?.kind === 'structures'
+ * // caps?.type === 'structures'
  * // caps?.entries[0].structure.name === 'video/x-raw'
  * ```
  *

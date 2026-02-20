@@ -9,7 +9,7 @@ import type { Caps, Structure, Value } from './types.js';
  * Mirrors gst_value_serialize() / gst_structure_to_string() output.
  */
 export function valueToString(v: Value): string {
-  switch (v.kind) {
+  switch (v.type) {
     case 'int':
       return `(int)${v.value}`;
 
@@ -61,7 +61,7 @@ export function valueToString(v: Value): string {
  * (int, double, boolean, fraction).  Useful when the type can be inferred from context.
  */
 export function valueToStringBare(v: Value): string {
-  switch (v.kind) {
+  switch (v.type) {
     case 'int':     return String(v.value);
     case 'double': {
       const s = v.value.toString();
@@ -82,7 +82,7 @@ export function valueToStringBare(v: Value): string {
  *
  * @example
  * ```ts
- * structureToString({ name: 'video/x-raw', fields: new Map([['width', { kind: 'int', value: 1920 }]]) })
+ * structureToString({ name: 'video/x-raw', fields: new Map([['width', { type: 'int', value: 1920 }]]) })
  * // → 'video/x-raw, width=(int)1920'
  * ```
  */
@@ -103,14 +103,14 @@ export function structureToString(s: Structure): string {
  *
  * @example
  * ```ts
- * capsToString({ kind: 'any' })               // → 'ANY'
- * capsToString({ kind: 'empty' })             // → 'EMPTY'
- * capsToString({ kind: 'structures', entries: [...] }) // → 'video/x-raw, ...'
+ * capsToString({ type: 'any' })               // → 'ANY'
+ * capsToString({ type: 'empty' })             // → 'EMPTY'
+ * capsToString({ type: 'structures', entries: [...] }) // → 'video/x-raw, ...'
  * ```
  */
 export function capsToString(caps: Caps): string {
-  if (caps.kind === 'any') return 'ANY';
-  if (caps.kind === 'empty') return 'EMPTY';
+  if (caps.type === 'any') return 'ANY';
+  if (caps.type === 'empty') return 'EMPTY';
 
   return caps.entries
     .map(({ structure, features }) => {
