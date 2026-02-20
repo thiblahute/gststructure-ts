@@ -1,5 +1,5 @@
 import type { Structure, Value } from './types.js';
-import { parseStructureOrThrow } from './parser.js';
+import { Parser, ParseError } from './_parser.js';
 import { structureToString } from './serializer.js';
 
 // ---------------------------------------------------------------------------
@@ -9,19 +9,19 @@ import { structureToString } from './serializer.js';
 /**
  * Unwrap a typed `Value` to its plain JavaScript primitive or object.
  *
- * | Value type  | Returns                              |
- * |-------------|--------------------------------------|
- * | int/double  | `number`                             |
- * | string      | `string`                             |
- * | boolean     | `boolean`                            |
- * | bitmask     | `bigint`                             |
+ * | Value type  | Returns                                      |
+ * |-------------|----------------------------------------------|
+ * | int/double  | `number`                                     |
+ * | string      | `string`                                     |
+ * | boolean     | `boolean`                                    |
+ * | bitmask     | `bigint`                                     |
  * | fraction    | `{ numerator: number; denominator: number }` |
- * | flags       | `string[]`                           |
- * | list/array  | `unknown[]` (recursively unwrapped)  |
- * | range       | `{ min, max, step? }` (unwrapped)    |
- * | structure   | `GstStructure`                       |
- * | caps        | `Caps` (kept as-is)                  |
- * | typed       | unwrapped inner value                |
+ * | flags       | `string[]`                                   |
+ * | list/array  | `unknown[]` (recursively unwrapped)          |
+ * | range       | `{ min, max, step? }` (unwrapped)            |
+ * | structure   | `GstStructure`                               |
+ * | caps        | `Caps` (kept as-is)                          |
+ * | typed       | unwrapped inner value                        |
  */
 export function unwrapValue(v: Value): unknown {
   switch (v.type) {
@@ -98,8 +98,9 @@ export class GstStructure implements Structure {
    * @throws {ParseError} if the string is invalid.
    */
   static fromString(s: string): GstStructure {
-    const parsed = parseStructureOrThrow(s);
-    return new GstStructure(parsed.name, parsed.fields);
+    const p = new Parser(s.trim());
+    const { name, fields } = p.parseStructure();
+    return new GstStructure(name, fields);
   }
 
   /**
@@ -116,3 +117,5 @@ export class GstStructure implements Structure {
     return structureToString(this);
   }
 }
+
+export { ParseError };
