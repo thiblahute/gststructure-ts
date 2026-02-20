@@ -7,10 +7,10 @@ import {
   capsToString,
   valueToString,
   GstStructure,
+  GstCaps,
   unwrapValue,
   type Value,
   type Structure,
-  type Caps,
 } from '../src/index.js';
 
 // ---------------------------------------------------------------------------
@@ -419,103 +419,124 @@ describe('Structure – whitespace and edge cases', () => {
 // ---------------------------------------------------------------------------
 
 describe('Caps – special values', () => {
-  it('parses ANY', () => {
-    expect(parseCaps('ANY')).toEqual({ type: 'any' });
+  it('parseCaps returns a GstCaps instance', () => {
+    expect(parseCaps('ANY')).toBeInstanceOf(GstCaps);
   });
 
-  it('parses EMPTY', () => {
-    expect(parseCaps('EMPTY')).toEqual({ type: 'empty' });
+  it('ANY: isAny=true, isEmpty=false, length=0', () => {
+    const caps = parseCaps('ANY')!;
+    expect(caps.isAny).toBe(true);
+    expect(caps.isEmpty).toBe(false);
+    expect(caps.length).toBe(0);
   });
 
-  it('parses NONE', () => {
-    expect(parseCaps('NONE')).toEqual({ type: 'empty' });
+  it('EMPTY: isEmpty=true, isAny=false, length=0', () => {
+    const caps = parseCaps('EMPTY')!;
+    expect(caps.isEmpty).toBe(true);
+    expect(caps.isAny).toBe(false);
+    expect(caps.length).toBe(0);
+  });
+
+  it('NONE: isEmpty=true', () => {
+    expect(parseCaps('NONE')!.isEmpty).toBe(true);
   });
 });
 
 describe('Caps – single structure', () => {
   it('parses a bare media type', () => {
-    const caps = parseCaps('video/x-raw');
-    expect(caps!.type).toBe('structures');
-    if (caps!.type === 'structures') {
-      expect(caps!.entries.length).toBe(1);
-      expect(caps!.entries[0].structure.name).toBe('video/x-raw');
-      expect(caps!.entries[0].features).toEqual([]);
-    }
+    const caps = parseCaps('video/x-raw')!;
+    expect(caps.length).toBe(1);
+    expect(caps[0]).toBeInstanceOf(GstStructure);
+    expect(caps[0]!.name).toBe('video/x-raw');
+    expect(caps.getFeatures(0)).toEqual([]);
   });
 
-  it('parses a structure with fields', () => {
-    const caps = parseCaps('video/x-raw, format=I420, width=1920, height=1080');
-    expect(caps!.type).toBe('structures');
-    if (caps!.type === 'structures') {
-      const s = caps!.entries[0].structure;
-      expect(s.name).toBe('video/x-raw');
-      expect(s.fields.get('format')).toEqual({ type: 'string', value: 'I420' });
-      expect(s.fields.get('width')).toEqual({ type: 'int', value: 1920 });
-      expect(s.fields.get('height')).toEqual({ type: 'int', value: 1080 });
-    }
+  it('accesses fields via bracket notation', () => {
+    const caps = parseCaps('video/x-raw, format=I420, width=1920, height=1080')!;
+    expect(caps[0]!['format']).toBe('I420');
+    expect(caps[0]!['width']).toBe(1920);
+    expect(caps[0]!['height']).toBe(1080);
+  });
+
+  it('typed field access via getTyped', () => {
+    const caps = parseCaps('video/x-raw, format=I420, width=1920')!;
+    expect(caps[0]!.getTyped('width')).toEqual({ type: 'int', value: 1920 });
+    expect(caps[0]!.getTyped('format')).toEqual({ type: 'string', value: 'I420' });
   });
 
   it('parses framerate as a fraction', () => {
-    const caps = parseCaps('video/x-raw, framerate=30/1');
-    if (caps!.type === 'structures') {
-      expect(caps!.entries[0].structure.fields.get('framerate')).toEqual({
-        type: 'fraction',
-        numerator: 30,
-        denominator: 1,
-      });
-    }
+    const caps = parseCaps('video/x-raw, framerate=30/1')!;
+    expect(caps[0]!['framerate']).toEqual({ numerator: 30, denominator: 1 });
   });
 
   it('parses a framerate range', () => {
-    const caps = parseCaps('video/x-raw, framerate=[15/1, 60/1]');
-    if (caps!.type === 'structures') {
-      const fr = caps!.entries[0].structure.fields.get('framerate');
-      expect(fr?.type).toBe('range');
-    }
+    const caps = parseCaps('video/x-raw, framerate=[15/1, 60/1]')!;
+    const fr = caps[0]!['framerate'] as { min: unknown; max: unknown };
+    expect(fr.min).toEqual({ numerator: 15, denominator: 1 });
+    expect(fr.max).toEqual({ numerator: 60, denominator: 1 });
+  });
+
+  it('index out of bounds returns undefined', () => {
+    const caps = parseCaps('video/x-raw')!;
+    expect(caps[1]).toBeUndefined();
+    expect(caps[99]).toBeUndefined();
   });
 });
 
 describe('Caps – capability features', () => {
   it('parses a single feature', () => {
-    const caps = parseCaps('video/x-raw(memory:DMABuf), format=NV12');
-    expect(caps!.type).toBe('structures');
-    if (caps!.type === 'structures') {
-      expect(caps!.entries[0].features).toEqual(['memory:DMABuf']);
-      expect(caps!.entries[0].structure.name).toBe('video/x-raw');
-    }
+    const caps = parseCaps('video/x-raw(memory:DMABuf), format=NV12')!;
+    expect(caps[0]!.name).toBe('video/x-raw');
+    expect(caps.getFeatures(0)).toEqual(['memory:DMABuf']);
+    expect(caps[0]!['format']).toBe('NV12');
   });
 
   it('parses multiple features', () => {
-    const caps = parseCaps('video/x-raw(memory:DMABuf, meta:VideoMeta)');
-    if (caps!.type === 'structures') {
-      expect(caps!.entries[0].features).toEqual(['memory:DMABuf', 'meta:VideoMeta']);
-    }
+    const caps = parseCaps('video/x-raw(memory:DMABuf, meta:VideoMeta)')!;
+    expect(caps.getFeatures(0)).toEqual(['memory:DMABuf', 'meta:VideoMeta']);
   });
 });
 
 describe('Caps – multiple structures', () => {
   it('parses two structures separated by semicolon', () => {
-    const caps = parseCaps('video/x-raw, format=I420; audio/x-raw, rate=44100');
-    expect(caps!.type).toBe('structures');
-    if (caps!.type === 'structures') {
-      expect(caps!.entries.length).toBe(2);
-      expect(caps!.entries[0].structure.name).toBe('video/x-raw');
-      expect(caps!.entries[1].structure.name).toBe('audio/x-raw');
-    }
+    const caps = parseCaps('video/x-raw, format=I420; audio/x-raw, rate=44100')!;
+    expect(caps.length).toBe(2);
+    expect(caps[0]!.name).toBe('video/x-raw');
+    expect(caps[1]!.name).toBe('audio/x-raw');
+    expect(caps[0]!['format']).toBe('I420');
+    expect(caps[1]!['rate']).toBe(44100);
   });
 
   it('parses three structures', () => {
-    const caps = parseCaps('video/x-raw; audio/x-raw; application/x-rtp');
-    if (caps!.type === 'structures') {
-      expect(caps!.entries.length).toBe(3);
-    }
+    const caps = parseCaps('video/x-raw; audio/x-raw; application/x-rtp')!;
+    expect(caps.length).toBe(3);
   });
 
   it('handles whitespace around semicolons', () => {
-    const caps = parseCaps('video/x-raw ; audio/x-raw');
-    if (caps!.type === 'structures') {
-      expect(caps!.entries.length).toBe(2);
-    }
+    const caps = parseCaps('video/x-raw ; audio/x-raw')!;
+    expect(caps.length).toBe(2);
+  });
+
+  it('is iterable with for...of', () => {
+    const caps = parseCaps('video/x-raw; audio/x-raw')!;
+    const names: string[] = [];
+    for (const s of caps) names.push(s.name);
+    expect(names).toEqual(['video/x-raw', 'audio/x-raw']);
+  });
+
+  it('spread into array', () => {
+    const caps = parseCaps('video/x-raw; audio/x-raw')!;
+    const structs = [...caps];
+    expect(structs).toHaveLength(2);
+    expect(structs[0]).toBeInstanceOf(GstStructure);
+  });
+});
+
+describe('GstCaps.fromString', () => {
+  it('parses a caps string directly', () => {
+    const caps = GstCaps.fromString('video/x-raw, format=I420');
+    expect(caps).toBeInstanceOf(GstCaps);
+    expect(caps[0]!['format']).toBe('I420');
   });
 });
 
@@ -616,42 +637,33 @@ describe('Serialization – structureToString', () => {
 
 describe('Serialization – capsToString', () => {
   it('serializes ANY', () => {
-    expect(capsToString({ type: 'any' })).toBe('ANY');
+    expect(GstCaps.fromString('ANY').toString()).toBe('ANY');
   });
 
   it('serializes EMPTY', () => {
-    expect(capsToString({ type: 'empty' })).toBe('EMPTY');
+    expect(GstCaps.fromString('EMPTY').toString()).toBe('EMPTY');
   });
 
   it('round-trips caps with one structure', () => {
     const caps = parseCaps('video/x-raw, format=I420')!;
-    const out = capsToString(caps);
-    const caps2 = parseCaps(out)!;
-    expect(caps2.type).toBe('structures');
-    if (caps2.type === 'structures') {
-      expect(caps2.entries[0].structure.name).toBe('video/x-raw');
-    }
+    const caps2 = parseCaps(caps.toString())!;
+    expect(caps2[0]!.name).toBe('video/x-raw');
   });
 
   it('round-trips caps with features', () => {
     const caps = parseCaps('video/x-raw(memory:DMABuf), format=NV12')!;
-    const out = capsToString(caps);
+    const out = caps.toString();
     expect(out).toContain('memory:DMABuf');
     const caps2 = parseCaps(out)!;
-    if (caps2.type === 'structures') {
-      expect(caps2.entries[0].features).toEqual(['memory:DMABuf']);
-    }
+    expect(caps2.getFeatures(0)).toEqual(['memory:DMABuf']);
   });
 
   it('round-trips caps with two structures', () => {
     const caps = parseCaps('video/x-raw, format=I420; audio/x-raw, rate=44100')!;
-    const out = capsToString(caps);
-    const caps2 = parseCaps(out)!;
-    if (caps2.type === 'structures') {
-      expect(caps2.entries.length).toBe(2);
-      expect(caps2.entries[0].structure.name).toBe('video/x-raw');
-      expect(caps2.entries[1].structure.name).toBe('audio/x-raw');
-    }
+    const caps2 = parseCaps(caps.toString())!;
+    expect(caps2.length).toBe(2);
+    expect(caps2[0]!.name).toBe('video/x-raw');
+    expect(caps2[1]!.name).toBe('audio/x-raw');
   });
 });
 

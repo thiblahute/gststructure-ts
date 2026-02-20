@@ -1,6 +1,6 @@
-import type { Caps } from './types.js';
 import { Parser, ParseError } from './_parser.js';
 import { GstStructure } from './structure.js';
+import { GstCaps } from './caps.js';
 
 export { ParseError };
 
@@ -32,24 +32,21 @@ export function parseStructureOrThrow(s: string): GstStructure {
 }
 
 /**
- * Parse a GstCaps string.
- *
- * Handles the special strings "ANY", "EMPTY", and "NONE", as well as
- * one or more structures separated by semicolons.
+ * Parse a GstCaps string, returning a `GstCaps` with array-like access.
+ * Returns `null` if the string is invalid.
  *
  * @example
  * ```ts
  * const caps = parseCaps('video/x-raw, format=I420; audio/x-raw, rate=44100');
- * // caps?.type === 'structures'
- * // caps?.entries[0].structure.name === 'video/x-raw'
+ * caps![0]['format']  // → 'I420'
+ * caps![1].name       // → 'audio/x-raw'
+ * caps!.length        // → 2
  * ```
- *
- * @returns The parsed Caps, or `null` if the string is invalid.
  */
-export function parseCaps(s: string): Caps | null {
+export function parseCaps(s: string): GstCaps | null {
   if (!s || !s.trim()) return null;
   try {
-    return new Parser(s.trim()).parseCaps();
+    return GstCaps.fromString(s);
   } catch {
     return null;
   }
@@ -58,6 +55,6 @@ export function parseCaps(s: string): Caps | null {
 /**
  * Parse a GstCaps string, throwing `ParseError` on failure.
  */
-export function parseCapsOrThrow(s: string): Caps {
-  return new Parser(s.trim()).parseCaps();
+export function parseCapsOrThrow(s: string): GstCaps {
+  return GstCaps.fromString(s);
 }

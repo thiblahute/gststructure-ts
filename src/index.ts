@@ -55,6 +55,8 @@ export {
   unwrapValue,
 } from './structure.js';
 
+export { GstCaps } from './caps.js';
+
 export {
   valueToString,
   valueToStringBare,
