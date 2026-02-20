@@ -1,14 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import {
-  parseStructure,
-  parseStructureOrThrow,
-  parseCaps,
   structureToString,
   capsToString,
   valueToString,
   GstStructure,
   GstCaps,
   unwrapValue,
+  ParseError,
   type Value,
   type Structure,
 } from '../src/index.js';
@@ -29,31 +27,31 @@ function field(s: Structure, name: string): Value {
 
 describe('Structure – basic names', () => {
   it('parses a bare name with no fields', () => {
-    const s = parseStructure('play');
+    const s = GstStructure.fromString('play');
     expect(s).not.toBeNull();
     expect(s!.name).toBe('play');
     expect(s!.fields.size).toBe(0);
   });
 
   it('parses a bare name followed by semicolon', () => {
-    const s = parseStructure('play;');
+    const s = GstStructure.fromString('play;');
     expect(s!.name).toBe('play');
     expect(s!.fields.size).toBe(0);
   });
 
   it('parses a caps-style media-type name (slash)', () => {
-    const s = parseStructure('video/x-raw');
+    const s = GstStructure.fromString('video/x-raw');
     expect(s!.name).toBe('video/x-raw');
   });
 
   it('parses a hyphenated name', () => {
-    const s = parseStructure('set-property, name=foo, value=(int)42');
+    const s = GstStructure.fromString('set-property, name=foo, value=(int)42');
     expect(s!.name).toBe('set-property');
   });
 
-  it('returns null for an empty string', () => {
-    expect(parseStructure('')).toBeNull();
-    expect(parseStructure('   ')).toBeNull();
+  it('throws ParseError for an empty string', () => {
+    expect(() => GstStructure.fromString('')).toThrow(ParseError);
+    expect(() => GstStructure.fromString('   ')).toThrow(ParseError);
   });
 });
 
@@ -63,27 +61,27 @@ describe('Structure – basic names', () => {
 
 describe('Structure – integer values', () => {
   it('parses a positive integer', () => {
-    const s = parseStructure('seek, start=5');
+    const s = GstStructure.fromString('seek, start=5');
     expect(field(s!, 'start')).toEqual({ type: 'int', value: 5 });
   });
 
   it('parses a negative integer', () => {
-    const s = parseStructure('foo, x=-42');
+    const s = GstStructure.fromString('foo, x=-42');
     expect(field(s!, 'x')).toEqual({ type: 'int', value: -42 });
   });
 
   it('parses a hex number (0x prefix) as int', () => {
-    const s = parseStructure('foo, v=0xFF');
+    const s = GstStructure.fromString('foo, v=0xFF');
     expect(field(s!, 'v')).toEqual({ type: 'int', value: 255 });
   });
 
   it('parses an explicitly typed int', () => {
-    const s = parseStructure('foo, v=(int)42');
+    const s = GstStructure.fromString('foo, v=(int)42');
     expect(field(s!, 'v')).toEqual({ type: 'int', value: 42 });
   });
 
   it('parses an explicitly typed gint64', () => {
-    const s = parseStructure('foo, n=(gint64)9000000000');
+    const s = GstStructure.fromString('foo, n=(gint64)9000000000');
     expect(field(s!, 'n')).toEqual({ type: 'int', value: 9000000000 });
   });
 });
@@ -94,32 +92,32 @@ describe('Structure – integer values', () => {
 
 describe('Structure – double values', () => {
   it('parses a positive float', () => {
-    const s = parseStructure('seek, start=5.0');
+    const s = GstStructure.fromString('seek, start=5.0');
     expect(field(s!, 'start')).toEqual({ type: 'double', value: 5.0 });
   });
 
   it('parses a float with only fractional part', () => {
-    const s = parseStructure('foo, x=.5');
+    const s = GstStructure.fromString('foo, x=.5');
     expect(field(s!, 'x')).toEqual({ type: 'double', value: 0.5 });
   });
 
   it('parses a negative float', () => {
-    const s = parseStructure('foo, x=-3.14');
+    const s = GstStructure.fromString('foo, x=-3.14');
     expect(field(s!, 'x')).toEqual({ type: 'double', value: -3.14 });
   });
 
   it('parses an explicitly typed float', () => {
-    const s = parseStructure('set-property, value=(float)1.0');
+    const s = GstStructure.fromString('set-property, value=(float)1.0');
     expect(field(s!, 'value')).toEqual({ type: 'double', value: 1.0 });
   });
 
   it('parses an explicitly typed double', () => {
-    const s = parseStructure('foo, d=(double)2.718');
+    const s = GstStructure.fromString('foo, d=(double)2.718');
     expect(field(s!, 'd')).toEqual({ type: 'double', value: 2.718 });
   });
 
   it('coerces (double) from int token', () => {
-    const s = parseStructure('foo, d=(double)3');
+    const s = GstStructure.fromString('foo, d=(double)3');
     expect(field(s!, 'd')).toEqual({ type: 'double', value: 3 });
   });
 });
@@ -130,29 +128,29 @@ describe('Structure – double values', () => {
 
 describe('Structure – boolean values', () => {
   it('parses true', () => {
-    const s = parseStructure('meta, handles-states=true');
+    const s = GstStructure.fromString('meta, handles-states=true');
     expect(field(s!, 'handles-states')).toEqual({ type: 'boolean', value: true });
   });
 
   it('parses false', () => {
-    const s = parseStructure('meta, seek=false');
+    const s = GstStructure.fromString('meta, seek=false');
     expect(field(s!, 'seek')).toEqual({ type: 'boolean', value: false });
   });
 
   it('parses yes/no aliases', () => {
-    const s = parseStructure('meta, a=yes, b=NO');
+    const s = GstStructure.fromString('meta, a=yes, b=NO');
     expect(field(s!, 'a')).toEqual({ type: 'boolean', value: true });
     expect(field(s!, 'b')).toEqual({ type: 'boolean', value: false });
   });
 
   it('parses t/f aliases (case insensitive)', () => {
-    const s = parseStructure('meta, c=t, d=F');
+    const s = GstStructure.fromString('meta, c=t, d=F');
     expect(field(s!, 'c')).toEqual({ type: 'boolean', value: true });
     expect(field(s!, 'd')).toEqual({ type: 'boolean', value: false });
   });
 
   it('parses explicitly typed bool with numeric 1/0', () => {
-    const s = parseStructure('meta, enabled=(bool)1, disabled=(bool)0');
+    const s = GstStructure.fromString('meta, enabled=(bool)1, disabled=(bool)0');
     expect(field(s!, 'enabled')).toEqual({ type: 'boolean', value: true });
     expect(field(s!, 'disabled')).toEqual({ type: 'boolean', value: false });
   });
@@ -164,32 +162,32 @@ describe('Structure – boolean values', () => {
 
 describe('Structure – string values', () => {
   it('parses a quoted string', () => {
-    const s = parseStructure('checkpoint, text="Hello World"');
+    const s = GstStructure.fromString('checkpoint, text="Hello World"');
     expect(field(s!, 'text')).toEqual({ type: 'string', value: 'Hello World' });
   });
 
   it('handles escape sequences in quoted strings', () => {
-    const s = parseStructure('foo, s="line1\\nline2"');
+    const s = GstStructure.fromString('foo, s="line1\\nline2"');
     expect(field(s!, 's')).toEqual({ type: 'string', value: 'line1\nline2' });
   });
 
   it('handles escaped quotes inside quoted strings', () => {
-    const s = parseStructure('foo, s="say \\"hi\\""');
+    const s = GstStructure.fromString('foo, s="say \\"hi\\""');
     expect(field(s!, 's')).toEqual({ type: 'string', value: 'say "hi"' });
   });
 
   it('parses an unquoted string (fallback)', () => {
-    const s = parseStructure('foo, format=I420');
+    const s = GstStructure.fromString('foo, format=I420');
     expect(field(s!, 'format')).toEqual({ type: 'string', value: 'I420' });
   });
 
   it('parses unquoted string with colon (e.g. pad reference)', () => {
-    const s = parseStructure('config, sink=videosink:sink');
+    const s = GstStructure.fromString('config, sink=videosink:sink');
     expect(field(s!, 'sink')).toEqual({ type: 'string', value: 'videosink:sink' });
   });
 
   it('parses explicitly typed (string) coercion', () => {
-    const s = parseStructure('foo, field-is-string=(string)true');
+    const s = GstStructure.fromString('foo, field-is-string=(string)true');
     expect(field(s!, 'field-is-string')).toEqual({ type: 'string', value: 'true' });
   });
 });
@@ -200,12 +198,12 @@ describe('Structure – string values', () => {
 
 describe('Structure – fraction values', () => {
   it('parses a fraction', () => {
-    const s = parseStructure('set-property, framerate=30/1');
+    const s = GstStructure.fromString('set-property, framerate=30/1');
     expect(field(s!, 'framerate')).toEqual({ type: 'fraction', numerator: 30, denominator: 1 });
   });
 
   it('parses an explicitly typed fraction', () => {
-    const s = parseStructure('foo, f=(fraction)1/2');
+    const s = GstStructure.fromString('foo, f=(fraction)1/2');
     expect(field(s!, 'f')).toEqual({ type: 'fraction', numerator: 1, denominator: 2 });
   });
 });
@@ -216,7 +214,7 @@ describe('Structure – fraction values', () => {
 
 describe('Structure – bitmask values', () => {
   it('parses an explicitly typed bitmask', () => {
-    const s = parseStructure('set-caps, mask=(bitmask)0x67');
+    const s = GstStructure.fromString('set-caps, mask=(bitmask)0x67');
     expect(field(s!, 'mask')).toEqual({ type: 'bitmask', value: 0x67n });
   });
 });
@@ -227,18 +225,18 @@ describe('Structure – bitmask values', () => {
 
 describe('Structure – flags values', () => {
   it('parses a single-flag (bare identifier treated as string, not flag)', () => {
-    const s = parseStructure('seek, flags=accurate');
+    const s = GstStructure.fromString('seek, flags=accurate');
     // A single word without '+' is a plain string
     expect(field(s!, 'flags')).toEqual({ type: 'string', value: 'accurate' });
   });
 
   it('parses multiple flags joined by +', () => {
-    const s = parseStructure('seek, start=5.0, stop=10.0, flags=flush+accurate');
+    const s = GstStructure.fromString('seek, start=5.0, stop=10.0, flags=flush+accurate');
     expect(field(s!, 'flags')).toEqual({ type: 'flags', flags: ['flush', 'accurate'] });
   });
 
   it('parses three flags', () => {
-    const s = parseStructure('foo, f=a+b+c');
+    const s = GstStructure.fromString('foo, f=a+b+c');
     expect(field(s!, 'f')).toEqual({ type: 'flags', flags: ['a', 'b', 'c'] });
   });
 });
@@ -249,7 +247,7 @@ describe('Structure – flags values', () => {
 
 describe('Structure – list and array values', () => {
   it('parses a GstValueList { }', () => {
-    const s = parseStructure('foo, opts={1, 2, 3}');
+    const s = GstStructure.fromString('foo, opts={1, 2, 3}');
     expect(field(s!, 'opts')).toEqual({
       type: 'list',
       items: [
@@ -261,7 +259,7 @@ describe('Structure – list and array values', () => {
   });
 
   it('parses a GstValueArray < >', () => {
-    const s = parseStructure('foo, arr=<1, 2, 3>');
+    const s = GstStructure.fromString('foo, arr=<1, 2, 3>');
     expect(field(s!, 'arr')).toEqual({
       type: 'array',
       items: [
@@ -273,7 +271,7 @@ describe('Structure – list and array values', () => {
   });
 
   it('parses a list with mixed types', () => {
-    const s = parseStructure('foo, v={"hello", 42, true}');
+    const s = GstStructure.fromString('foo, v={"hello", 42, true}');
     expect(field(s!, 'v')).toEqual({
       type: 'list',
       items: [
@@ -291,7 +289,7 @@ describe('Structure – list and array values', () => {
 
 describe('Structure – range values', () => {
   it('parses an int range', () => {
-    const s = parseStructure('foo, r=[1, 100]');
+    const s = GstStructure.fromString('foo, r=[1, 100]');
     expect(field(s!, 'r')).toEqual({
       type: 'range',
       min: { type: 'int', value: 1 },
@@ -301,7 +299,7 @@ describe('Structure – range values', () => {
   });
 
   it('parses a range with step', () => {
-    const s = parseStructure('foo, r=[0, 255, 2]');
+    const s = GstStructure.fromString('foo, r=[0, 255, 2]');
     expect(field(s!, 'r')).toEqual({
       type: 'range',
       min: { type: 'int', value: 0 },
@@ -311,7 +309,7 @@ describe('Structure – range values', () => {
   });
 
   it('parses a fraction range', () => {
-    const s = parseStructure('foo, fps=[15/1, 60/1]');
+    const s = GstStructure.fromString('foo, fps=[15/1, 60/1]');
     expect(field(s!, 'fps')).toEqual({
       type: 'range',
       min: { type: 'fraction', numerator: 15, denominator: 1 },
@@ -327,7 +325,7 @@ describe('Structure – range values', () => {
 
 describe('Structure – nested structure and caps', () => {
   it('parses (GstStructure)"name, field=value;"', () => {
-    const s = parseStructure('outer, inner=(GstStructure)"inner-struct, n=(int)1;"');
+    const s = GstStructure.fromString('outer, inner=(GstStructure)"inner-struct, n=(int)1;"');
     const inner = field(s!, 'inner');
     expect(inner.type).toBe('structure');
     if (inner.type === 'structure') {
@@ -337,7 +335,7 @@ describe('Structure – nested structure and caps', () => {
   });
 
   it('parses (GstCaps)"video/x-raw" as caps value', () => {
-    const s = parseStructure('seek, caps=(GstCaps)"video/x-raw"');
+    const s = GstStructure.fromString('seek, caps=(GstCaps)"video/x-raw"');
     const caps = field(s!, 'caps');
     expect(caps.type).toBe('caps');
     if (caps.type === 'caps') {
@@ -346,13 +344,13 @@ describe('Structure – nested structure and caps', () => {
   });
 
   it('parses (caps)"audio/x-raw" (lowercase alias)', () => {
-    const s = parseStructure('seek, caps=(caps)"audio/x-raw"');
+    const s = GstStructure.fromString('seek, caps=(caps)"audio/x-raw"');
     const caps = field(s!, 'caps');
     expect(caps.type).toBe('caps');
   });
 
   it('parses (GstCaps)[video/x-raw, format=I420] bracket syntax', () => {
-    const s = parseStructure('set-caps, caps=(GstCaps)[video/x-raw, format=I420]');
+    const s = GstStructure.fromString('set-caps, caps=(GstCaps)[video/x-raw, format=I420]');
     const caps = field(s!, 'caps');
     expect(caps.type).toBe('caps');
     if (caps.type === 'caps') {
@@ -374,17 +372,17 @@ describe('Structure – nested structure and caps', () => {
 
 describe('Structure – field name syntax', () => {
   it('parses a field with :: path separator', () => {
-    const s = parseStructure('set-properties, element::property=50');
+    const s = GstStructure.fromString('set-properties, element::property=50');
     expect(field(s!, 'element::property')).toEqual({ type: 'int', value: 50 });
   });
 
   it('parses a field with element.pad::property path', () => {
-    const s = parseStructure('check-properties, compositor.sink_0::xpos=100');
+    const s = GstStructure.fromString('check-properties, compositor.sink_0::xpos=100');
     expect(field(s!, 'compositor.sink_0::xpos')).toEqual({ type: 'int', value: 100 });
   });
 
   it('parses a hyphenated field name', () => {
-    const s = parseStructure('meta, handles-states=true');
+    const s = GstStructure.fromString('meta, handles-states=true');
     expect(s!.fields.has('handles-states')).toBe(true);
   });
 });
@@ -395,18 +393,18 @@ describe('Structure – field name syntax', () => {
 
 describe('Structure – whitespace and edge cases', () => {
   it('ignores leading/trailing whitespace', () => {
-    const s = parseStructure('  seek , start = 5.0  ');
+    const s = GstStructure.fromString('  seek , start = 5.0  ');
     expect(s!.name).toBe('seek');
     expect(field(s!, 'start')).toEqual({ type: 'double', value: 5.0 });
   });
 
   it('handles trailing comma in field list', () => {
-    const s = parseStructure('seek, start=5.0,');
+    const s = GstStructure.fromString('seek, start=5.0,');
     expect(s!.fields.size).toBe(1);
   });
 
   it('handles multiple fields', () => {
-    const s = parseStructure('seek, start=5.0, stop=10.0, flags=flush+accurate');
+    const s = GstStructure.fromString('seek, start=5.0, stop=10.0, flags=flush+accurate');
     expect(s!.fields.size).toBe(3);
     expect(field(s!, 'start')).toEqual({ type: 'double', value: 5.0 });
     expect(field(s!, 'stop')).toEqual({ type: 'double', value: 10.0 });
@@ -419,32 +417,32 @@ describe('Structure – whitespace and edge cases', () => {
 // ---------------------------------------------------------------------------
 
 describe('Caps – special values', () => {
-  it('parseCaps returns a GstCaps instance', () => {
-    expect(parseCaps('ANY')).toBeInstanceOf(GstCaps);
+  it('fromString returns a GstCaps instance', () => {
+    expect(GstCaps.fromString('ANY')).toBeInstanceOf(GstCaps);
   });
 
   it('ANY: isAny=true, isEmpty=false, length=0', () => {
-    const caps = parseCaps('ANY')!;
+    const caps = GstCaps.fromString('ANY')!;
     expect(caps.isAny).toBe(true);
     expect(caps.isEmpty).toBe(false);
     expect(caps.length).toBe(0);
   });
 
   it('EMPTY: isEmpty=true, isAny=false, length=0', () => {
-    const caps = parseCaps('EMPTY')!;
+    const caps = GstCaps.fromString('EMPTY')!;
     expect(caps.isEmpty).toBe(true);
     expect(caps.isAny).toBe(false);
     expect(caps.length).toBe(0);
   });
 
   it('NONE: isEmpty=true', () => {
-    expect(parseCaps('NONE')!.isEmpty).toBe(true);
+    expect(GstCaps.fromString('NONE')!.isEmpty).toBe(true);
   });
 });
 
 describe('Caps – single structure', () => {
   it('parses a bare media type', () => {
-    const caps = parseCaps('video/x-raw')!;
+    const caps = GstCaps.fromString('video/x-raw')!;
     expect(caps.length).toBe(1);
     expect(caps[0]).toBeInstanceOf(GstStructure);
     expect(caps[0]!.name).toBe('video/x-raw');
@@ -452,32 +450,32 @@ describe('Caps – single structure', () => {
   });
 
   it('accesses fields via bracket notation', () => {
-    const caps = parseCaps('video/x-raw, format=I420, width=1920, height=1080')!;
+    const caps = GstCaps.fromString('video/x-raw, format=I420, width=1920, height=1080')!;
     expect(caps[0]!['format']).toBe('I420');
     expect(caps[0]!['width']).toBe(1920);
     expect(caps[0]!['height']).toBe(1080);
   });
 
   it('typed field access via getTyped', () => {
-    const caps = parseCaps('video/x-raw, format=I420, width=1920')!;
+    const caps = GstCaps.fromString('video/x-raw, format=I420, width=1920')!;
     expect(caps[0]!.getTyped('width')).toEqual({ type: 'int', value: 1920 });
     expect(caps[0]!.getTyped('format')).toEqual({ type: 'string', value: 'I420' });
   });
 
   it('parses framerate as a fraction', () => {
-    const caps = parseCaps('video/x-raw, framerate=30/1')!;
+    const caps = GstCaps.fromString('video/x-raw, framerate=30/1')!;
     expect(caps[0]!['framerate']).toEqual({ numerator: 30, denominator: 1 });
   });
 
   it('parses a framerate range', () => {
-    const caps = parseCaps('video/x-raw, framerate=[15/1, 60/1]')!;
+    const caps = GstCaps.fromString('video/x-raw, framerate=[15/1, 60/1]')!;
     const fr = caps[0]!['framerate'] as { min: unknown; max: unknown };
     expect(fr.min).toEqual({ numerator: 15, denominator: 1 });
     expect(fr.max).toEqual({ numerator: 60, denominator: 1 });
   });
 
   it('index out of bounds returns undefined', () => {
-    const caps = parseCaps('video/x-raw')!;
+    const caps = GstCaps.fromString('video/x-raw')!;
     expect(caps[1]).toBeUndefined();
     expect(caps[99]).toBeUndefined();
   });
@@ -485,21 +483,21 @@ describe('Caps – single structure', () => {
 
 describe('Caps – capability features', () => {
   it('parses a single feature', () => {
-    const caps = parseCaps('video/x-raw(memory:DMABuf), format=NV12')!;
+    const caps = GstCaps.fromString('video/x-raw(memory:DMABuf), format=NV12')!;
     expect(caps[0]!.name).toBe('video/x-raw');
     expect(caps.getFeatures(0)).toEqual(['memory:DMABuf']);
     expect(caps[0]!['format']).toBe('NV12');
   });
 
   it('parses multiple features', () => {
-    const caps = parseCaps('video/x-raw(memory:DMABuf, meta:VideoMeta)')!;
+    const caps = GstCaps.fromString('video/x-raw(memory:DMABuf, meta:VideoMeta)')!;
     expect(caps.getFeatures(0)).toEqual(['memory:DMABuf', 'meta:VideoMeta']);
   });
 });
 
 describe('Caps – multiple structures', () => {
   it('parses two structures separated by semicolon', () => {
-    const caps = parseCaps('video/x-raw, format=I420; audio/x-raw, rate=44100')!;
+    const caps = GstCaps.fromString('video/x-raw, format=I420; audio/x-raw, rate=44100')!;
     expect(caps.length).toBe(2);
     expect(caps[0]!.name).toBe('video/x-raw');
     expect(caps[1]!.name).toBe('audio/x-raw');
@@ -508,24 +506,24 @@ describe('Caps – multiple structures', () => {
   });
 
   it('parses three structures', () => {
-    const caps = parseCaps('video/x-raw; audio/x-raw; application/x-rtp')!;
+    const caps = GstCaps.fromString('video/x-raw; audio/x-raw; application/x-rtp')!;
     expect(caps.length).toBe(3);
   });
 
   it('handles whitespace around semicolons', () => {
-    const caps = parseCaps('video/x-raw ; audio/x-raw')!;
+    const caps = GstCaps.fromString('video/x-raw ; audio/x-raw')!;
     expect(caps.length).toBe(2);
   });
 
   it('is iterable with for...of', () => {
-    const caps = parseCaps('video/x-raw; audio/x-raw')!;
+    const caps = GstCaps.fromString('video/x-raw; audio/x-raw')!;
     const names: string[] = [];
     for (const s of caps) names.push(s.name);
     expect(names).toEqual(['video/x-raw', 'audio/x-raw']);
   });
 
   it('spread into array', () => {
-    const caps = parseCaps('video/x-raw; audio/x-raw')!;
+    const caps = GstCaps.fromString('video/x-raw; audio/x-raw')!;
     const structs = [...caps];
     expect(structs).toHaveLength(2);
     expect(structs[0]).toBeInstanceOf(GstStructure);
@@ -615,21 +613,21 @@ describe('Serialization – valueToString', () => {
 
 describe('Serialization – structureToString', () => {
   it('round-trips a simple structure', () => {
-    const s = parseStructure('seek, start=5.0')!;
+    const s = GstStructure.fromString('seek, start=5.0')!;
     const out = structureToString(s);
     expect(out).toContain('seek');
     expect(out).toContain('start=');
 
     // Re-parse the serialized form
-    const s2 = parseStructure(out)!;
+    const s2 = GstStructure.fromString(out)!;
     expect(s2.name).toBe('seek');
     expect(s2.fields.get('start')).toEqual({ type: 'double', value: 5.0 });
   });
 
   it('round-trips a structure with multiple fields', () => {
-    const s = parseStructure('video/x-raw, format=I420, width=1920, height=1080')!;
+    const s = GstStructure.fromString('video/x-raw, format=I420, width=1920, height=1080')!;
     const out = structureToString(s);
-    const s2 = parseStructure(out)!;
+    const s2 = GstStructure.fromString(out)!;
     expect(s2.name).toBe('video/x-raw');
     expect(s2.fields.size).toBe(3);
   });
@@ -645,22 +643,22 @@ describe('Serialization – capsToString', () => {
   });
 
   it('round-trips caps with one structure', () => {
-    const caps = parseCaps('video/x-raw, format=I420')!;
-    const caps2 = parseCaps(caps.toString())!;
+    const caps = GstCaps.fromString('video/x-raw, format=I420')!;
+    const caps2 = GstCaps.fromString(caps.toString())!;
     expect(caps2[0]!.name).toBe('video/x-raw');
   });
 
   it('round-trips caps with features', () => {
-    const caps = parseCaps('video/x-raw(memory:DMABuf), format=NV12')!;
+    const caps = GstCaps.fromString('video/x-raw(memory:DMABuf), format=NV12')!;
     const out = caps.toString();
     expect(out).toContain('memory:DMABuf');
-    const caps2 = parseCaps(out)!;
+    const caps2 = GstCaps.fromString(out)!;
     expect(caps2.getFeatures(0)).toEqual(['memory:DMABuf']);
   });
 
   it('round-trips caps with two structures', () => {
-    const caps = parseCaps('video/x-raw, format=I420; audio/x-raw, rate=44100')!;
-    const caps2 = parseCaps(caps.toString())!;
+    const caps = GstCaps.fromString('video/x-raw, format=I420; audio/x-raw, rate=44100')!;
+    const caps2 = GstCaps.fromString(caps.toString())!;
     expect(caps2.length).toBe(2);
     expect(caps2[0]!.name).toBe('video/x-raw');
     expect(caps2[1]!.name).toBe('audio/x-raw');
@@ -672,17 +670,20 @@ describe('Serialization – capsToString', () => {
 // ---------------------------------------------------------------------------
 
 describe('Error handling', () => {
-  it('returns null for invalid structure', () => {
-    expect(parseStructure('=invalid')).toBeNull();
-    expect(parseStructure('foo, =bad')).toBeNull();
+  it('throws ParseError for invalid structure', () => {
+    expect(() => GstStructure.fromString('=invalid')).toThrow(ParseError);
+    expect(() => GstStructure.fromString('foo, =bad')).toThrow(ParseError);
   });
 
-  it('returns null for null/undefined-like empty input', () => {
-    expect(parseStructure('')).toBeNull();
+  it('throws ParseError for empty structure string', () => {
+    expect(() => GstStructure.fromString('')).toThrow(ParseError);
   });
 
-  it('returns null for invalid caps', () => {
-    expect(parseCaps('')).toBeNull();
+  it('empty caps string yields a caps with no structures', () => {
+    const caps = GstCaps.fromString('');
+    expect(caps.length).toBe(0);
+    expect(caps.isAny).toBe(false);
+    expect(caps.isEmpty).toBe(false);
   });
 });
 
@@ -695,11 +696,6 @@ describe('GstStructure – dict-like field access', () => {
     const s = GstStructure.fromString('seek, start=5.0');
     expect(s).toBeInstanceOf(GstStructure);
     expect(s.name).toBe('seek');
-  });
-
-  it('parseStructure returns a GstStructure instance', () => {
-    const s = parseStructure('seek, start=5.0');
-    expect(s).toBeInstanceOf(GstStructure);
   });
 
   it('accesses an int field as a number', () => {

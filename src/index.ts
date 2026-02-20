@@ -13,10 +13,11 @@
  *
  * @example Parse GstCaps
  * ```ts
- * import { parseCaps } from 'gststructure';
+ * import { GstCaps } from 'gststructure';
  *
- * const caps = parseCaps('video/x-raw, format=I420; audio/x-raw, rate=44100');
- * // caps.type === 'structures'
+ * const caps = GstCaps.fromString('video/x-raw, format=I420; audio/x-raw, rate=44100');
+ * caps[0]['format']  // → 'I420'
+ * caps.length        // → 2
  * ```
  *
  * @module
@@ -42,13 +43,7 @@ export type {
   TypedValue,
 } from './types.js';
 
-export {
-  ParseError,
-  parseStructure,
-  parseStructureOrThrow,
-  parseCaps,
-  parseCapsOrThrow,
-} from './parser.js';
+export { ParseError } from './_parser.js';
 
 export {
   GstStructure,
