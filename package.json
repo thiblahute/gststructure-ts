@@ -11,17 +11,28 @@
       "types": "./dist/index.d.ts"
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsc",
     "test": "vitest run",
     "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "prepare": "npm run build",
     "prepublishOnly": "npm run build"
   },
-  "keywords": ["gstreamer", "gststructure", "gstcaps", "parser"],
+  "keywords": [
+    "gstreamer",
+    "gststructure",
+    "gstcaps",
+    "parser"
+  ],
   "license": "MIT",
   "devDependencies": {
+    "prettier": "^3.8.3",
     "typescript": "^5.0.0",
     "vitest": "^2.0.0"
   }

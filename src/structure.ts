@@ -25,23 +25,36 @@ import { structureToString } from './serializer.js';
  */
 export function unwrapValue(v: Value): unknown {
   switch (v.type) {
-    case 'int':     return v.value;
-    case 'double':  return v.value;
-    case 'string':  return v.value;
-    case 'boolean': return v.value;
-    case 'bitmask': return v.value;
-    case 'fraction': return { numerator: v.numerator, denominator: v.denominator };
-    case 'flags':   return v.flags.slice();
-    case 'list':    return v.items.map(unwrapValue);
-    case 'array':   return v.items.map(unwrapValue);
-    case 'range':   return {
-      min: unwrapValue(v.min),
-      max: unwrapValue(v.max),
-      ...(v.step != null && { step: unwrapValue(v.step) }),
-    };
-    case 'structure': return new GstStructure(v.value.name, v.value.fields);
-    case 'caps':    return v.value;
-    case 'typed':   return unwrapValue(v.value);
+    case 'int':
+      return v.value;
+    case 'double':
+      return v.value;
+    case 'string':
+      return v.value;
+    case 'boolean':
+      return v.value;
+    case 'bitmask':
+      return v.value;
+    case 'fraction':
+      return { numerator: v.numerator, denominator: v.denominator };
+    case 'flags':
+      return v.flags.slice();
+    case 'list':
+      return v.items.map(unwrapValue);
+    case 'array':
+      return v.items.map(unwrapValue);
+    case 'range':
+      return {
+        min: unwrapValue(v.min),
+        max: unwrapValue(v.max),
+        ...(v.step != null && { step: unwrapValue(v.step) }),
+      };
+    case 'structure':
+      return new GstStructure(v.value.name, v.value.fields);
+    case 'caps':
+      return v.value;
+    case 'typed':
+      return unwrapValue(v.value);
   }
 }
 

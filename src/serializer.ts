@@ -62,14 +62,18 @@ export function valueToString(v: Value): string {
  */
 export function valueToStringBare(v: Value): string {
   switch (v.type) {
-    case 'int':     return String(v.value);
+    case 'int':
+      return String(v.value);
     case 'double': {
       const s = v.value.toString();
       return s.includes('.') || s.includes('e') ? s : s + '.0';
     }
-    case 'boolean': return v.value ? 'true' : 'false';
-    case 'fraction': return `${v.numerator}/${v.denominator}`;
-    default:        return valueToString(v);
+    case 'boolean':
+      return v.value ? 'true' : 'false';
+    case 'fraction':
+      return `${v.numerator}/${v.denominator}`;
+    default:
+      return valueToString(v);
   }
 }
 

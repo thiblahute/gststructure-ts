@@ -568,7 +568,9 @@ describe('Serialization – valueToString', () => {
   });
 
   it('serializes fraction', () => {
-    expect(valueToString({ type: 'fraction', numerator: 30, denominator: 1 })).toBe('(fraction)30/1');
+    expect(valueToString({ type: 'fraction', numerator: 30, denominator: 1 })).toBe(
+      '(fraction)30/1'
+    );
   });
 
   it('serializes bitmask', () => {
@@ -587,7 +589,7 @@ describe('Serialization – valueToString', () => {
           { type: 'int', value: 1 },
           { type: 'int', value: 2 },
         ],
-      }),
+      })
     ).toBe('{ (int)1, (int)2 }');
   });
 
@@ -595,8 +597,11 @@ describe('Serialization – valueToString', () => {
     expect(
       valueToString({
         type: 'array',
-        items: [{ type: 'string', value: 'a' }, { type: 'string', value: 'b' }],
-      }),
+        items: [
+          { type: 'string', value: 'a' },
+          { type: 'string', value: 'b' },
+        ],
+      })
     ).toBe('< "a", "b" >');
   });
 
@@ -606,7 +611,7 @@ describe('Serialization – valueToString', () => {
         type: 'range',
         min: { type: 'int', value: 0 },
         max: { type: 'int', value: 255 },
-      }),
+      })
     ).toBe('[ (int)0, (int)255 ]');
   });
 });
@@ -878,14 +883,17 @@ describe('unwrapValue', () => {
   it('unwraps boolean', () => expect(unwrapValue({ type: 'boolean', value: true })).toBe(true));
   it('unwraps bitmask', () => expect(unwrapValue({ type: 'bitmask', value: 5n })).toBe(5n));
   it('unwraps fraction', () => {
-    expect(unwrapValue({ type: 'fraction', numerator: 1, denominator: 2 }))
-      .toEqual({ numerator: 1, denominator: 2 });
+    expect(unwrapValue({ type: 'fraction', numerator: 1, denominator: 2 })).toEqual({
+      numerator: 1,
+      denominator: 2,
+    });
   });
   it('unwraps flags', () => {
     expect(unwrapValue({ type: 'flags', flags: ['a', 'b'] })).toEqual(['a', 'b']);
   });
   it('unwraps typed by delegating to inner value', () => {
-    expect(unwrapValue({ type: 'typed', typeName: 'MyType', value: { type: 'int', value: 99 } }))
-      .toBe(99);
+    expect(
+      unwrapValue({ type: 'typed', typeName: 'MyType', value: { type: 'int', value: 99 } })
+    ).toBe(99);
   });
 });

@@ -39,7 +39,7 @@ export class GstCaps {
 
   constructor(caps: Caps) {
     this._raw = caps;
-    this.isAny   = caps.type === 'any';
+    this.isAny = caps.type === 'any';
     this.isEmpty = caps.type === 'empty';
     this._entries = caps.type === 'structures' ? caps.entries : [];
 

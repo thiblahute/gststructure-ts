@@ -14,7 +14,7 @@ export class ParseError extends Error {
   constructor(
     message: string,
     public readonly pos: number,
-    public readonly input: string,
+    public readonly input: string
   ) {
     const excerpt = input.slice(Math.max(0, pos - 10), pos + 20);
     super(`${message} at position ${pos}: ...${JSON.stringify(excerpt)}...`);
@@ -74,7 +74,7 @@ export class Parser {
       throw new ParseError(
         `Expected '${s}', got '${this.input.slice(this.pos, this.pos + 10)}'`,
         this.pos,
-        this.input,
+        this.input
       );
     }
   }
@@ -254,12 +254,23 @@ export class Parser {
         this.pos++;
         const esc = this.consume();
         switch (esc) {
-          case 'n':  result += '\n'; break;
-          case 't':  result += '\t'; break;
-          case 'r':  result += '\r'; break;
-          case '"':  result += '"';  break;
-          case '\\': result += '\\'; break;
-          default:   result += '\\' + esc;
+          case 'n':
+            result += '\n';
+            break;
+          case 't':
+            result += '\t';
+            break;
+          case 'r':
+            result += '\r';
+            break;
+          case '"':
+            result += '"';
+            break;
+          case '\\':
+            result += '\\';
+            break;
+          default:
+            result += '\\' + esc;
         }
       } else {
         result += this.consume();
@@ -274,8 +285,15 @@ export class Parser {
     while (!this.eof) {
       const c = this.input[this.pos];
       if (
-        c === ',' || c === ';' || c === ']' || c === '}' || c === '>' ||
-        c === ' ' || c === '\t' || c === '\r' || c === '\n'
+        c === ',' ||
+        c === ';' ||
+        c === ']' ||
+        c === '}' ||
+        c === '>' ||
+        c === ' ' ||
+        c === '\t' ||
+        c === '\r' ||
+        c === '\n'
       ) {
         break;
       }
@@ -298,14 +316,20 @@ export class Parser {
     while (!this.eof) {
       this.skipWS();
       const c = this.peek();
-      if (c === ';') { this.pos++; break; }
+      if (c === ';') {
+        this.pos++;
+        break;
+      }
       if (c !== ',') break;
 
       this.pos++;
       this.skipWS();
 
       if (this.eof) break;
-      if (this.peek() === ';') { this.pos++; break; }
+      if (this.peek() === ';') {
+        this.pos++;
+        break;
+      }
 
       const [fname, fvalue] = this.parseField();
       fields.set(fname, fvalue);
@@ -330,7 +354,7 @@ export class Parser {
   parseCaps(): Caps {
     this.skipWS();
 
-    if (this.tryConsume('ANY'))   return { type: 'any' };
+    if (this.tryConsume('ANY')) return { type: 'any' };
     if (this.tryConsume('EMPTY') || this.tryConsume('NONE')) return { type: 'empty' };
 
     const entries: CapsEntry[] = [];
@@ -351,7 +375,10 @@ export class Parser {
           const feat = this.parseCapsFeatureName();
           if (feat) features.push(feat);
           this.skipWS();
-          if (this.peek() === ',') { this.pos++; this.skipWS(); }
+          if (this.peek() === ',') {
+            this.pos++;
+            this.skipWS();
+          }
         }
         this.expect(')');
         this.skipWS();
@@ -372,7 +399,11 @@ export class Parser {
       entries.push({ structure: { name, fields }, features });
 
       this.skipWS();
-      if (this.peek() === ';') { this.pos++; } else { break; }
+      if (this.peek() === ';') {
+        this.pos++;
+      } else {
+        break;
+      }
     }
 
     return { type: 'structures', entries };
@@ -431,16 +462,32 @@ export function inferType(raw: string): Value {
 function interpretTyped(typeName: string, raw: Value): Value {
   const n = typeName.toLowerCase();
 
-  if (['int','gint','uint','guint','gint8','gint16','gint32','gint64',
-       'guint8','guint16','guint32','guint64','int64','uint64'].includes(n)) {
+  if (
+    [
+      'int',
+      'gint',
+      'uint',
+      'guint',
+      'gint8',
+      'gint16',
+      'gint32',
+      'gint64',
+      'guint8',
+      'guint16',
+      'guint32',
+      'guint64',
+      'int64',
+      'uint64',
+    ].includes(n)
+  ) {
     return coerceInt(raw);
   }
-  if (['double','gdouble','float','gfloat'].includes(n)) return coerceDouble(raw);
-  if (['boolean','gboolean','bool'].includes(n)) return coerceBool(raw);
-  if (['string','gchararray'].includes(n)) return coerceString(raw);
-  if (['bitmask','gstbitmask'].includes(n)) return coerceBitmask(raw);
-  if (['fraction','gstfraction'].includes(n)) return raw;
-  if (['gstcaps','caps'].includes(n)) return coerceCaps(raw);
+  if (['double', 'gdouble', 'float', 'gfloat'].includes(n)) return coerceDouble(raw);
+  if (['boolean', 'gboolean', 'bool'].includes(n)) return coerceBool(raw);
+  if (['string', 'gchararray'].includes(n)) return coerceString(raw);
+  if (['bitmask', 'gstbitmask'].includes(n)) return coerceBitmask(raw);
+  if (['fraction', 'gstfraction'].includes(n)) return raw;
+  if (['gstcaps', 'caps'].includes(n)) return coerceCaps(raw);
   if (n === 'gststructure') return coerceStructure(raw);
 
   return { type: 'typed', typeName, value: raw };
@@ -452,7 +499,10 @@ function coerceInt(v: Value): Value {
   if (v.type === 'boolean') return { type: 'int', value: v.value ? 1 : 0 };
   if (v.type === 'string') {
     const s = v.value;
-    return { type: 'int', value: s.startsWith('0x') || s.startsWith('0X') ? parseInt(s, 16) : parseInt(s, 10) };
+    return {
+      type: 'int',
+      value: s.startsWith('0x') || s.startsWith('0X') ? parseInt(s, 16) : parseInt(s, 10),
+    };
   }
   return v;
 }
@@ -469,7 +519,10 @@ function coerceBool(v: Value): Value {
   if (v.type === 'int') return { type: 'boolean', value: v.value !== 0 };
   if (v.type === 'string') {
     const low = v.value.toLowerCase();
-    return { type: 'boolean', value: low === 'true' || low === 'yes' || low === 't' || low === '1' };
+    return {
+      type: 'boolean',
+      value: low === 'true' || low === 'yes' || low === 't' || low === '1',
+    };
   }
   return v;
 }
@@ -488,8 +541,13 @@ function coerceBitmask(v: Value): Value {
   if (v.type === 'string') {
     try {
       const s = v.value;
-      return { type: 'bitmask', value: s.startsWith('0x') || s.startsWith('0X') ? BigInt(s) : BigInt(s) };
-    } catch { return v; }
+      return {
+        type: 'bitmask',
+        value: s.startsWith('0x') || s.startsWith('0X') ? BigInt(s) : BigInt(s),
+      };
+    } catch {
+      return v;
+    }
   }
   return v;
 }
@@ -513,9 +571,17 @@ function coerceStructure(v: Value): Value {
 }
 
 function parseStructureInner(s: string): Structure | null {
-  try { return new Parser(s).parseStructure(); } catch { return null; }
+  try {
+    return new Parser(s).parseStructure();
+  } catch {
+    return null;
+  }
 }
 
 function parseCapsInner(s: string): Caps | null {
-  try { return new Parser(s).parseCaps(); } catch { return null; }
+  try {
+    return new Parser(s).parseCaps();
+  } catch {
+    return null;
+  }
 }

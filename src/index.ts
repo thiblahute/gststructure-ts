@@ -45,16 +45,8 @@ export type {
 
 export { ParseError } from './_parser.js';
 
-export {
-  GstStructure,
-  unwrapValue,
-} from './structure.js';
+export { GstStructure, unwrapValue } from './structure.js';
 
 export { GstCaps } from './caps.js';
 
-export {
-  valueToString,
-  valueToStringBare,
-  structureToString,
-  capsToString,
-} from './serializer.js';
+export { valueToString, valueToStringBare, structureToString, capsToString } from './serializer.js';
