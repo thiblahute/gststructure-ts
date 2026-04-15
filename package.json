@@ -1,6 +1,6 @@
 {
   "name": "gststructure",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Pure TypeScript parser for GStreamer Structure and Caps serialization format",
   "type": "module",
   "main": "./dist/index.js",
@@ -31,6 +31,14 @@
     "parser"
   ],
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/thiblahute/gststructure-ts.git"
+  },
+  "bugs": {
+    "url": "https://github.com/thiblahute/gststructure-ts/issues"
+  },
+  "homepage": "https://github.com/thiblahute/gststructure-ts#readme",
   "devDependencies": {
     "prettier": "^3.8.3",
     "typescript": "^5.0.0",
